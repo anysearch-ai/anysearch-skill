@@ -13,7 +13,7 @@ credentials:
 
 ## Overview
 
-AnySearch is a unified real-time search service supporting general web search, vertical domain search, parallel batch search, and full-page content extraction. It exposes a single JSON-RPC 2.0 endpoint and requires no MCP server installation. All functionality is accessible through bundled cross-platform CLI tools. Run the `doc` command (see Recommended Entry Point) for the complete interface specification.
+AnySearch is a unified real-time search service supporting general web search, vertical domain search, parallel batch search, and full-page content extraction. It exposes a single JSON-RPC 2.0 endpoint and requires no MCP server installation. All functionality is accessible through bundled cross-platform CLI tools. Use the configured runtime directly for routine `search`, `batch_search`, `extract`, and `list_domains` calls; run the `doc` command only when the CLI interface is unknown or recovery information is needed (see Recommended Entry Point).
 
 ## Trigger
 
@@ -31,9 +31,27 @@ This skill SHOULD be activated when the AI agent needs to perform any of the fol
 
 ## Recommended Entry Point
 
-When this skill is first loaded, the agent MUST run the active CLI's `doc` command to obtain the complete interface specification (all tool parameters, decision flow, vertical search constraints, rate limit handling). This is an offline operation — no network call required.
+Prefer direct CLI invocation. If `<skill_dir>/runtime.conf` exists and the requested command shape is already obvious (`search`, `batch_search`, `extract`, or `list_domains`), the agent SHOULD use the configured command directly and SHOULD NOT run `doc` on every activation. Run `doc` only when the CLI interface is unknown, a command fails due to argument/schema uncertainty, the skill was just installed/updated, or vertical-domain constraints require the complete reference. The `doc` command is offline and remains available for recovery, but repeated metadata reads waste tool calls and tokens.
 
-Run the `doc` command via the platform-selected CLI (see Platform Detection below):
+### Command Cheat Sheet
+
+Use these exact command shapes for routine calls. Replace `<cmd>` with the command from `runtime.conf` (for example, `python3 <skill_dir>/scripts/anysearch_cli.py`). Do not invent extra output-format flags.
+
+```bash
+# Search. Optional filters: --max_results N, --freshness day|week|month|year, --content_types web,news,code,doc,academic,data,image,video,audio
+<cmd> search "query" --max_results 5
+
+# Batch search. Use JSON query objects when per-query max_results/freshness are needed.
+<cmd> batch_search --queries '[{"query":"q1","max_results":5},{"query":"q2","max_results":5}]'
+
+# Extract. Output is already Markdown. Supported args are only the URL positional argument or --url/-u.
+<cmd> extract "https://example.com/page"
+<cmd> extract --url "https://example.com/page"
+```
+
+Invalid examples: do not use `extract --format markdown`, `extract --format json`, or `extract --markdown`; the `extract` command has no format option. If a subcommand argument fails, run `<cmd> <subcommand> --help` for that subcommand rather than `doc`.
+
+Run the `doc` command via the platform-selected CLI only when needed (see Platform Detection below):
 
 | Runtime | Command |
 |---------|---------|
@@ -97,7 +115,7 @@ When a user provides a key in chat, advise them to configure it via `.env` or en
 
 ### Pre-detected Runtime
 
-If `<skill_dir>/runtime.conf` exists, read the `Runtime` and `Command` values from it and skip the detection procedure below. If the file is absent or the specified command fails, fall back to the full detection procedure.
+If `<skill_dir>/runtime.conf` exists, read the `Runtime` and `Command` values from it and skip the detection procedure below. Treat this as the normal fast path for routine searches. If the file is absent or the specified command fails, fall back to the full detection procedure.
 
 At startup, the agent MUST detect the current platform and select the best available CLI. The priority order is:
 
