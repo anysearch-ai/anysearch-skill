@@ -1,0 +1,15 @@
+{
+  "endpoint": "https://api.anysearch.com/mcp",
+  "available_domains": [
+    "code", "travel", "home", "ecommerce",
+    "gaming", "film", "music", "finance", "academic", "legal",
+    "business", "ip", "health",
+    "geo", "environment", "energy"
+  ],
+  "content_types": [
+    "web", "news", "code", "doc", "academic",
+    "data", "image", "video", "audio"
+  ],
+  "freshness_values": ["day", "week", "month", "year"],
+  "zones": ["cn", "intl"]
+}
