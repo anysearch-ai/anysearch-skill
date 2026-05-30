@@ -27,7 +27,7 @@ unzip anysearch-skill.zip
 # Shared agents:  mv anysearch-skill ~/.agents/skills/anysearch
 ```
 
-`~/.agents/skills/` is a useful shared install location when multiple AI tools read from the same skill directory, including Codex, Cursor, and OpenClaw personal agent skills.
+`~/.agents/skills/` is a useful shared install location when multiple AI tools read from the same skill directory, including Codex and Cursor.
 
 ### For Humans
 
