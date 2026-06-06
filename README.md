@@ -197,3 +197,7 @@ anysearch/
     ├── anysearch_cli.ps1      # PowerShell CLI
     └── anysearch_cli.sh       # Bash CLI
 ```
+
+## Download History
+
+[![Download History](https://skill-history.com/chart/anysearch-ai/anysearch.svg)](https://skill-history.com/anysearch-ai/anysearch)
