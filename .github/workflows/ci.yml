@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  generated-scripts:
+    name: Generated scripts are in sync and doc output is clean
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Verify CLI scripts match generate.py (no drift)
+        run: python scripts/generate.py --check
+
+      - name: Ensure jq is available (bash CLI dependency)
+        run: jq --version || (sudo apt-get update && sudo apt-get install -y jq)
+
+      - name: doc output must not leak unreplaced {{...}} template placeholders
+        run: |
+          fail=0
+          # Capture each CLI's `doc` output, then match WITHOUT a `producer | grep`
+          # pipe: under `set -o pipefail` (GitHub's default for run steps) a
+          # `cmd | grep -q` lets grep close the pipe on first match, killing the
+          # producer with SIGPIPE (141), which would make this check spuriously
+          # pass. `case` on a captured string has no such race.
+          check() {
+            label=$1; shift
+            if ! command -v "$1" >/dev/null 2>&1; then
+              echo "skip: $label ($1 not installed)"
+              return
+            fi
+            if ! out=$("$@" doc 2>/dev/null); then
+              echo "::error::$label: 'doc' command exited non-zero"
+              fail=1
+              return
+            fi
+            case "$out" in
+              *'{{'*) echo "::error::$label: doc output leaked an unreplaced {{...}} placeholder"; fail=1 ;;
+              *)      echo "ok: $label" ;;
+            esac
+          }
+          check python python3 scripts/anysearch_cli.py
+          check node    node    scripts/anysearch_cli.js
+          check bash    bash    scripts/anysearch_cli.sh
+          check pwsh    pwsh    -File scripts/anysearch_cli.ps1
+          exit $fail

@@ -370,7 +370,7 @@ _cmd_doc() {
   domains=$(jq -r '.available_domains | join(" ")' "$shared/constants.json")
   tpl="${tpl//\{\{LANG_NAME\}\}/Bash}"
   tpl="${tpl//\{\{LANG_CODEBLOCK\}\}/bash}"
-  tpl="${tpl//\{\{LANG_INVOKE\}\}\}/bash scripts/anysearch_cli.sh}"
+  tpl="${tpl//\{\{LANG_INVOKE\}\}/bash scripts/anysearch_cli.sh}"
   tpl="${tpl//\{\{DOMAINS_SPACE\}\}/$domains}"
   printf '%s\n' "$tpl"
 }
