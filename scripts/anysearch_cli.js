@@ -23,12 +23,19 @@ function loadEnv() {
     if (fs.existsSync(envPath)) {
       const lines = fs.readFileSync(envPath, "utf-8").split(/\r?\n/);
       for (const raw of lines) {
-        const line = raw.replace(/#.*$/, "").trim();
-        if (!line || line.indexOf("=") === -1) continue;
+        // '#' is a comment only at the start of a line, not inline, so a value
+        // that legitimately contains '#' (e.g. an API key) is preserved. (.trim()
+        // also strips a leading UTF-8 BOM.) Matches the Python CLI.
+        const line = raw.trim();
+        if (!line || line.startsWith("#") || line.indexOf("=") === -1) continue;
         const idx = line.indexOf("=");
         const key = line.substring(0, idx).trim();
-        let val = line.substring(idx + 1).trim().replace(/^["']|["']$/g, "");
-        process.env[key] = val;
+        // Strip surrounding quotes (any number, either kind) and re-trim, to
+        // match the Python reference.
+        const val = line.substring(idx + 1).trim().replace(/^["']+/, "").replace(/["']+$/, "").trim();
+        // Skip empty values so an empty .env entry does not clobber a real
+        // environment variable.
+        if (key && val) process.env[key] = val;
       }
     }
   }

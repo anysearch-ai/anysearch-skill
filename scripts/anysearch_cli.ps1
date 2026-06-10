@@ -15,12 +15,22 @@ function Load-Env {
     foreach ($envPath in $envPaths) {
         if (Test-Path $envPath) {
             Get-Content $envPath -Encoding UTF8 | ForEach-Object {
-                $line = $_.Split('#')[0].Trim()
-                if ($line -and $line -match '=') {
+                # '#' is a comment only at the start of a line, not inline, so a
+                # value that legitimately contains '#' (e.g. an API key) is
+                # preserved. Matches the Python CLI.
+                # TrimStart strips a leading UTF-8 BOM (Get-Content -Encoding UTF8
+                # does not remove it on Windows PowerShell 5.1, and .Trim() does
+                # not treat U+FEFF as whitespace).
+                $line = $_.TrimStart([char]0xFEFF).Trim()
+                if ($line -and -not $line.StartsWith('#') -and $line.Contains('=')) {
                     $idx = $line.IndexOf('=')
                     $key = $line.Substring(0, $idx).Trim()
-                    $val = $line.Substring($idx + 1).Trim().Trim('"').Trim("'")
-                    Set-Item -Path "env:$key" -Value $val
+                    # Strip surrounding quotes (any number, either kind) and re-trim,
+                    # to match the Python reference.
+                    $val = $line.Substring($idx + 1).Trim().Trim('"', "'").Trim()
+                    # Skip empty values so an empty .env entry does not clobber a
+                    # real environment variable.
+                    if ($key -and $val) { Set-Item -Path "env:$key" -Value $val }
                 }
             }
         }

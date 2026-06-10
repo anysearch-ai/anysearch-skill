@@ -10,17 +10,37 @@ if ! command -v jq &>/dev/null; then
   exit 1
 fi
 
+_trim() {
+  # Strip leading/trailing whitespace (pure bash, no subprocess). Unlike
+  # `echo "$x" | xargs` this preserves internal whitespace, backslashes and
+  # quotes in the value.
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
+}
+
 _load_env() {
   for env_path in "$SCRIPT_DIR/.env" "$SCRIPT_DIR/../.env"; do
     if [[ -f "$env_path" ]]; then
       while IFS= read -r line || [[ -n "$line" ]]; do
-        line="${line%%#*}"
-        line="$(echo "$line" | xargs 2>/dev/null || true)"
-        [[ -z "$line" || "$line" != *=* ]] && continue
-        local key="${line%%=*}"
-        local val="${line#*=}"
-        val="$(echo "$val" | sed 's/^["\x27]\|["\x27]$//g')"
-        export "$key=$val"
+        line="${line#$'\xEF\xBB\xBF'}"   # strip a leading UTF-8 BOM (first line)
+        line="$(_trim "$line")"
+        # '#' is a comment only at the start of a line, not inline, so a value
+        # that legitimately contains '#' (e.g. an API key) is preserved. Matches
+        # the Python CLI.
+        [[ -z "$line" || "$line" == \#* || "$line" != *=* ]] && continue
+        local key val
+        key="$(_trim "${line%%=*}")"
+        val="$(_trim "${line#*=}")"
+        # Strip surrounding quotes (any number, either kind) and re-trim, to
+        # match the Python reference: value.strip().strip("\"'").strip().
+        val="${val#"${val%%[!\"\']*}"}"
+        val="${val%"${val##*[!\"\']}"}"
+        val="$(_trim "$val")"
+        # Skip empty values so an empty .env entry does not clobber a real
+        # environment variable.
+        [[ -n "$key" && -n "$val" ]] && export "$key=$val"
       done < "$env_path"
     fi
   done
