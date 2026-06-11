@@ -1,0 +1,4 @@
+# Dependency for the Python CLI (scripts/anysearch_cli.py).
+# The Node.js, Bash and PowerShell CLIs require nothing from this file.
+#   pip install -r requirements.txt
+requests>=2.20

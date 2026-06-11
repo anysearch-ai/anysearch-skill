@@ -9,29 +9,29 @@ Unified real-time search engine skill for AI agents. Supports general web search
 If your agent platform supports a skill marketplace/store, search for **anysearch** and install from there. Otherwise, download and install manually:
 
 ```bash
-# Download (pin to a specific release version)
-curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/heads/main.zip
-# or: wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/heads/main.zip
+# Download a pinned release (recommended). Replace v2.1.0 with the latest tag
+# from https://github.com/anysearch-ai/anysearch-skill/releases
+curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v2.1.0.zip
+# or: wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v2.1.0.zip
+# (For the latest unreleased changes, use .../archive/refs/heads/main.zip instead.)
 
-# Verify integrity (replace with actual checksum from the release page)
-# sha256sum anysearch-skill.zip
-
-# Unzip
+# Unzip — creates a directory named anysearch-skill-<ref>, e.g. anysearch-skill-2.1.0
 unzip anysearch-skill.zip
 
-# Move to your agent's skill directory (example paths below, adjust for your agent)
-# Claude Code:    mv anysearch-skill ~/.claude/skills/anysearch
-# OpenCode:       mv anysearch-skill ~/.config/opencode/skills/anysearch
-# Cursor/Windsurf: mv anysearch-skill <project>/.skills/anysearch
-# Generic:        mv anysearch-skill <your_agent_skill_dir>/anysearch
-# Shared agents:  mv anysearch-skill ~/.agents/skills/anysearch
+# Move it to your agent's skill directory, renaming it to "anysearch".
+# Adjust the source directory name to match the ref you downloaded.
+# Claude Code:     mv anysearch-skill-2.1.0 ~/.claude/skills/anysearch
+# OpenCode:        mv anysearch-skill-2.1.0 ~/.config/opencode/skills/anysearch
+# Cursor/Windsurf: mv anysearch-skill-2.1.0 <project>/.skills/anysearch
+# Generic:         mv anysearch-skill-2.1.0 <your_agent_skill_dir>/anysearch
+# Shared agents:   mv anysearch-skill-2.1.0 ~/.agents/skills/anysearch
 ```
 
 `~/.agents/skills/` is a useful shared install location when multiple AI tools read from the same skill directory, including Codex, Cursor, and OpenClaw personal agent skills.
 
 ### For Humans
 
-1. Download the zip: https://github.com/anysearch-ai/anysearch-skill/archive/refs/heads/main.zip
+1. Download the latest release zip: https://github.com/anysearch-ai/anysearch-skill/releases
 2. Unzip to your agent's skill directory
 3. Configure API key (see below)
 4. Run the entry test to verify installation
@@ -78,7 +78,7 @@ python3 --version  # Need >= 3.6, requires `requests` library
 # Check Node.js (alternative)
 node --version     # Need >= 12, no external dependencies
 # Check Shell (fallback)
-# Windows: PowerShell 5.1+ / Linux/macOS: bash 4+
+# Windows: PowerShell 5.1+ / Linux/macOS: bash 3.2+ (also requires jq and curl)
 ```
 
 Priority: **Python > Node.js > Shell**
@@ -184,16 +184,22 @@ A successful JSON response confirms the API connection is working.
 ## File Structure
 
 ```
-anysearch/
+anysearch-skill/              # renamed to "anysearch" on install (see above)
 ├── .env.example              # API key configuration template
-├── .env                      # Your API key (gitignored, create from .env.example)
-├── runtime.conf              # Detected runtime preferences (gitignored)
+├── .env                      # Your API key (gitignored; create from .env.example)
 ├── runtime.conf.example      # Runtime configuration template
+├── runtime.conf              # Detected runtime preferences (gitignored; created at install)
 ├── SKILL.md                  # Skill definition for AI agents
 ├── README.md                 # This file
+├── SECURITY.md               # Security policy / vulnerability reporting
+├── TEST_PLAN.md              # End-to-end test plan
 └── scripts/
-    ├── anysearch_cli.py       # Python CLI
-    ├── anysearch_cli.js       # Node.js CLI
-    ├── anysearch_cli.ps1      # PowerShell CLI
-    └── anysearch_cli.sh       # Bash CLI
+    ├── anysearch_cli.py      # Python CLI
+    ├── anysearch_cli.js      # Node.js CLI
+    ├── anysearch_cli.ps1     # PowerShell CLI
+    ├── anysearch_cli.sh      # Bash CLI
+    ├── generate.py           # Regenerates the shared blocks in the 4 CLIs
+    └── shared/               # Single source of truth read by the CLIs
+        ├── constants.json    # Domain list + endpoint
+        └── doc_spec.md       # AI-facing interface spec (rendered by `doc`)
 ```

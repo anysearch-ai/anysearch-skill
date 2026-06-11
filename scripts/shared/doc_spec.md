@@ -41,8 +41,8 @@ Single failure does not block others; results are merged.
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| --query | string | YES (x1-5) | Repeatable single-query shorthand (CLI-only). Each value becomes `{"query":"..."}` — equivalent to the `queries` array with plain query objects |
-| --queries, -q | JSON | YES | JSON array of query objects, or @file.json to read from file |
+| --query | string | choose one | Repeatable single-query shorthand (CLI-only), 1-5 times. Each value becomes `{"query":"..."}` — equivalent to the `queries` array with plain query objects |
+| --queries, -q | JSON | choose one | JSON array of query objects (1-5), or @file.json to read from file |
 | --domain, -d | string | no | Shared domain injected into all query items (per-item domain overrides) |
 | --sub_domain, -s | string | no | Shared sub_domain injected into all query items (per-item sub_domain overrides) |
 | --sdp, --sub_domain_params, -p | string | no | Shared sub_domain_params (key=value or JSON) injected into all query items |
