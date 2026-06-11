@@ -63,6 +63,9 @@ function Call-Api {
         $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
         $webReq = [System.Net.HttpWebRequest]::Create($ENDPOINT)
         $webReq.Method = "POST"
+        # Do not auto-follow redirects: HttpWebRequest re-sends the Authorization
+        # header to the redirect target, which would leak the API key to another host.
+        $webReq.AllowAutoRedirect = $false
         $webReq.ContentType = "application/json; charset=utf-8"
         $webReq.Timeout = 30000
         if ($ApiKey) {
@@ -118,11 +121,43 @@ function Parse-JsonList {
     }
 }
 
+function ConvertTo-HashtableDeep {
+    # Recursively convert ConvertFrom-Json output (PSCustomObject / arrays /
+    # primitives) into nested hashtables. Used instead of `ConvertFrom-Json
+    # -AsHashtable`, which only exists on PowerShell 6+; on Windows PowerShell
+    # 5.1 that switch throws, so nested objects were silently lost.
+    #
+    # Type checks are ordered so we never depend on the unreliable
+    # `-is [pscustomobject]` test: strings and value types short-circuit first,
+    # dictionaries and arrays are handled explicitly, and anything else (a
+    # JSON object from ConvertFrom-Json) falls through to a property walk.
+    param($Obj)
+    if ($null -eq $Obj) { return $null }
+    if ($Obj -is [string]) { return $Obj }
+    if ($Obj -is [System.ValueType]) { return $Obj }   # numbers, booleans, etc.
+    if ($Obj -is [System.Collections.IDictionary]) {
+        $h = @{}
+        foreach ($k in $Obj.Keys) { $h[$k] = ConvertTo-HashtableDeep $Obj[$k] }
+        return $h
+    }
+    if ($Obj -is [System.Collections.IEnumerable]) {
+        return @($Obj | ForEach-Object { ConvertTo-HashtableDeep $_ })
+    }
+    # Anything else is a JSON object (a PSCustomObject from ConvertFrom-Json).
+    # Walk its NoteProperties only, so an unexpected rich .NET object can't make
+    # us recurse into adapted/self-referential members.
+    $h = @{}
+    foreach ($p in $Obj.PSObject.Properties) {
+        if ($p.MemberType -eq 'NoteProperty') { $h[$p.Name] = ConvertTo-HashtableDeep $p.Value }
+    }
+    return $h
+}
+
 function Parse-SubDomainParams {
     param([string]$Value)
     if (-not $Value) { return $null }
     try {
-        return ($Value | ConvertFrom-Json -AsHashtable)
+        return (ConvertTo-HashtableDeep ($Value | ConvertFrom-Json))
     } catch {
         # {key:value,key2:value2} format (PowerShell strips inner quotes from JSON)
         if ($Value.StartsWith('{') -and $Value.EndsWith('}')) {
@@ -283,7 +318,7 @@ function Repair-JsonObject {
         $val = $p.Substring($colon + 1).Trim()
 
         if ($val.StartsWith('{')) {
-            try { $result[$key] = $val | ConvertFrom-Json -AsHashtable }
+            try { $result[$key] = ConvertTo-HashtableDeep ($val | ConvertFrom-Json) }
             catch { $result[$key] = Repair-JsonObject $val }
         } elseif ($val.StartsWith('[')) {
             try { $result[$key] = @($val | ConvertFrom-Json) }
