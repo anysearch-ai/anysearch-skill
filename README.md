@@ -169,6 +169,17 @@ python3 <skill_dir>/scripts/anysearch_cli.py extract --url "https://example.com/
 
 `extract` output is already Markdown. Do not pass `--format markdown`, `--format json`, or `--markdown`; the extract command only accepts the URL positional argument or `--url`/`-u`. If a subcommand argument is unclear or fails, run `<command> <subcommand> --help` for that subcommand rather than the full `doc` command.
 
+### Social media source workflows
+
+AnySearch includes a `social_media` vertical domain. Use it for public social discovery before reaching for platform-specific tools:
+
+```bash
+python3 <skill_dir>/scripts/anysearch_cli.py get_sub_domains --domain social_media
+python3 <skill_dir>/scripts/anysearch_cli.py search "product launch response on X and Reddit" --domain social_media --sub_domain <returned-sub-domain> --max_results 5
+```
+
+AnySearch should stay the broad web and vertical search layer. When an OpenClaw user needs account-scoped X/Twitter source packets such as exact tweets, tweet replies, profile lookup, follower export, media URLs, monitors, webhooks, or approved post/reply workflows, use a dedicated authenticated tool after user approval. For example, TweetClaw (`@xquik/tweetclaw`) can provide the X/Twitter evidence packet while AnySearch keeps the cross-source context.
+
 ### Step 4 (optional): Test a real search
 
 ```bash
