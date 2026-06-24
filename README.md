@@ -42,6 +42,57 @@ unzip anysearch-skill.zip
 
 An API key is **optional but strongly recommended**. Without a key, you can still use all search features via anonymous access, but with **lower rate limits and quota**.
 
+### Register for an API Key (Recommended)
+
+The agent can register the user and obtain an API key in a **single call** — no verification code, no manual signup. Ask the user for a **real email address**: it becomes the account username, and a randomly generated password is emailed to it.
+
+```bash
+curl -s -X POST "https://api.anysearch.com/v1/auth/email/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@example.com"}'
+```
+
+Success response (`code: 0`) returns the account info and a one-time plaintext API key:
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "username": "you@example.com",
+    "email": "you@example.com",
+    "login_url": "https://www.anysearch.com/login",
+    "api_key": {
+      "id": "key_xxxxxxxx",
+      "key": "as_sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "key_prefix": "as_sk_xxxxxx...",
+      "name": "default",
+      "rate_limit": 100,
+      "quota_limit": 0,
+      "expires_at": null,
+      "created_at": "2026-06-23T10:23:00Z"
+    }
+  }
+}
+```
+
+On success the agent MUST:
+
+1. Write `data.api_key.key` to `.env` as `ANYSEARCH_API_KEY=<key>` — it is shown only once (it can also be retrieved later from the dashboard).
+2. Tell the user their username (= email), the `login_url`, and that a **random password has been emailed to that address**.
+
+Error handling (HTTP 200 unless noted; always read the `code` field):
+
+| code  | message                    | what to do                                                                 |
+| ----- | -------------------------- | -------------------------------------------------------------------------- |
+| 40001 | `invalid_email`            | ask the user to re-enter the email                                         |
+| 40901 | `email_already_registered` | email is taken — tell the user to sign in at `login_url`; do **not** retry  |
+| 42901 | `rate_limited`             | wait `data.retry_after_seconds`, then retry (per-IP limit, anti-abuse)      |
+| 50001 | `internal_error`           | retry later or fall back to anonymous                                      |
+| 50002 | `key_creation_failed`      | account created but key failed (`api_key` is null) — tell the user to sign in and create a key manually |
+
+> The email **must be real and reachable** — the password is delivered there. There is **no verification code** in this flow; the agent only ever asks for an email. Registration and anonymous use are mutually exclusive; once the user picks one, don't switch mid-flow.
+
 ### How to configure
 
 Copy the example env file and fill in your key:
