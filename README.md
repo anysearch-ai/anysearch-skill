@@ -82,15 +82,15 @@ On success the agent MUST:
 2. Tell the user their username (= email), the `login_url`, and that a **random password has been emailed to that address**.
 3. Relay this note to the user: *A verification email has been sent to your inbox. If you don't see it within a few minutes, please check your spam or junk folder. You may need to mark it as "Not Spam" to ensure future emails arrive correctly.*
 
-Error handling (HTTP 200 unless noted; always read the `code` field):
+Error handling (always `code: -1` on error; branch on the `message` string):
 
-| code  | message                    | what to do                                                                 |
-| ----- | -------------------------- | -------------------------------------------------------------------------- |
-| 40001 | `invalid_email`            | ask the user to re-enter the email                                         |
-| 40901 | `email_already_registered` | email is taken — tell the user to sign in at `login_url`; do **not** retry  |
-| 42901 | `rate_limited`             | wait `data.retry_after_seconds`, then retry (per-IP limit, anti-abuse)      |
-| 50001 | `internal_error`           | retry later or fall back to anonymous                                      |
-| 50002 | `key_creation_failed`      | account created but key failed (`api_key` is null) — tell the user to sign in and create a key manually |
+| message                           | what to do                                                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `Invalid email address.`          | ask the user to re-enter the email                                                                  |
+| `email_already_registered`        | email is taken — tell the user to sign in at `login_url`; do **not** retry                          |
+| contains `Rate limited`           | read retry seconds from message (e.g. `"Rate limited, retry after 300 seconds."`), wait, then retry |
+| starts with `Key creation failed.` | account created but key failed — extract the email and URL from the message (`"Key creation failed. Your account <email> was created; sign in at <url>."`) and tell the user to sign in there to create a key manually |
+| `Internal server error.`          | retry later or fall back to anonymous                                                               |
 
 > The email **must be real and reachable** — the password is delivered there. There is **no verification code** in this flow; the agent only ever asks for an email. Registration and anonymous use are mutually exclusive; once the user picks one, don't switch mid-flow.
 
