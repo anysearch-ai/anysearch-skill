@@ -50,11 +50,12 @@ Use these exact command shapes for routine calls. Replace `<cmd>` with the comma
 <cmd> get_sub_domains --domain finance
 <cmd> get_sub_domains --domains finance,health
 
-# Batch search — shared params apply to all queries (per-query fields override).
+# Batch search — shared params (--domain, --sub_domain, --sdp) apply to all queries (per-query fields override).
+# NOTE: --max_results is NOT a top-level flag for batch_search. max_results must be placed inside each query object.
 <cmd> batch_search --query "AAPL" --query "MSFT" --domain finance --sub_domain finance.quote --sdp type=stock,symbol=AAPL,cn_code=
-<cmd> batch_search --queries '[{"query":"AAPL","sub_domain_params":"type=stock,symbol=AAPL,cn_code="},{"query":"MSFT","sub_domain_params":"type=stock,symbol=MSFT,cn_code="}]' --domain finance --sub_domain finance.quote
-# Hybrid (mixed domains): omit shared params, specify per-query
-<cmd> batch_search --queries '[{"query":"quantum computing"},{"query":"QBTS","domain":"finance","sub_domain":"finance.quote","sub_domain_params":"type=stock,symbol=QBTS,cn_code="}]'
+<cmd> batch_search --queries '[{"query":"AAPL","max_results":3,"sub_domain_params":"type=stock,symbol=AAPL,cn_code="},{"query":"MSFT","max_results":3,"sub_domain_params":"type=stock,symbol=MSFT,cn_code="}]' --domain finance --sub_domain finance.quote
+# Hybrid (mixed domains): omit shared params, specify per-query (max_results goes inside each object too)
+<cmd> batch_search --queries '[{"query":"quantum computing","max_results":5},{"query":"QBTS","domain":"finance","sub_domain":"finance.quote","sub_domain_params":"type=stock,symbol=QBTS,cn_code="}]'
 
 # Extract. Output is already Markdown. Supported args are only the URL positional argument or --url/-u.
 <cmd> extract "https://example.com/page"
@@ -72,7 +73,7 @@ For public social-media research, treat `social_media` as a vertical domain:
 
 Use AnySearch for public discovery, cross-source context, and page extraction. If the user needs account-scoped X/Twitter evidence such as exact tweets, tweet replies, profile lookup, follower export, media URLs, monitors, webhooks, or approved post/reply workflows, hand off to a dedicated authenticated tool after user approval. In OpenClaw, TweetClaw (`@xquik/tweetclaw`) can provide that follow-up source packet while AnySearch remains the broad web and vertical search layer.
 
-Invalid examples: do not use `extract --format markdown`, `extract --format json`, or `extract --markdown`; the `extract` command has no format option. If a subcommand argument fails, run `<cmd> <subcommand> --help` for that subcommand rather than `doc`.
+Invalid examples: do not use `extract --format markdown`, `extract --format json`, or `extract --markdown`; the `extract` command has no format option. Do not use `batch_search --max_results N` or `batch_search -m N` as a top-level flag — `--max_results` / `-m` is only valid on the `search` subcommand, and on `batch_search` it must be placed inside each query object. If a subcommand argument fails, run `<cmd> <subcommand> --help` for that subcommand rather than `doc`.
 
 Run the `doc` command via the platform-selected CLI only when needed (see Platform Detection below):
 
