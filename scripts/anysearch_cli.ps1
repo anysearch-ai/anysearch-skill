@@ -8,6 +8,9 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
 
 $ENDPOINT = "https://api.anysearch.com/mcp"
+# Identifies access mode + spec version to the backend (X-Anysearch-Client).
+# Keep the version aligned with SKILL.md `version`.
+$CLIENT_HEADER = "skill/2.1.0"
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 function Load-Env {
@@ -78,6 +81,7 @@ function Call-Api {
         $webReq.AllowAutoRedirect = $false
         $webReq.ContentType = "application/json; charset=utf-8"
         $webReq.Timeout = 30000
+        $webReq.Headers.Add("X-Anysearch-Client", $CLIENT_HEADER)
         if ($ApiKey) {
             $webReq.Headers.Add("Authorization", "Bearer $ApiKey")
         }

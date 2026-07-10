@@ -3,6 +3,9 @@ export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
 ENDPOINT="https://api.anysearch.com/mcp"
+# Identifies access mode + spec version to the backend (X-Anysearch-Client).
+# Keep the version aligned with SKILL.md `version`.
+CLIENT_HEADER="skill/2.1.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if ! command -v jq &>/dev/null; then
@@ -138,6 +141,7 @@ _call_api() {
   local response http_code body
   response=$(curl -s -w '\n%{http_code}' -X POST "$ENDPOINT" \
     -H "Content-Type: application/json" \
+    -H "X-Anysearch-Client: $CLIENT_HEADER" \
     "${auth_args[@]}" \
     -d "$payload" \
     --max-time 30 2>/dev/null)

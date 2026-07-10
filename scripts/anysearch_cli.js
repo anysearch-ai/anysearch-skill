@@ -8,6 +8,9 @@ const https = require("https");
 process.stdout.setDefaultEncoding && process.stdout.setDefaultEncoding("utf-8");
 
 const ENDPOINT = "https://api.anysearch.com/mcp";
+// Identifies access mode + spec version to the backend (X-Anysearch-Client).
+// Keep the version aligned with SKILL.md `version`.
+const CLIENT_HEADER = "skill/2.1.0";
 
 // BEGIN GENERATED:CONSTANTS
 const AVAILABLE_DOMAINS = [
@@ -53,6 +56,7 @@ function httpRequest(url, payload, apikey) {
     headers: {
       "Content-Type": "application/json",
       "Content-Length": Buffer.byteLength(body),
+      "X-Anysearch-Client": CLIENT_HEADER,
     },
   };
   if (apikey) {

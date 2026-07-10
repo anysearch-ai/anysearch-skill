@@ -14,6 +14,9 @@ if sys.stderr.encoding != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 ENDPOINT = "https://api.anysearch.com/mcp"
+# Identifies access mode + spec version to the backend (X-Anysearch-Client).
+# Keep the version aligned with SKILL.md `version`.
+CLIENT_HEADER = "skill/2.1.0"
 
 def _load_env():
     """Load API keys from .env files near the skill.
@@ -55,7 +58,10 @@ AVAILABLE_DOMAINS = [
 
 
 def _build_headers(api_key: str) -> dict:
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "X-Anysearch-Client": CLIENT_HEADER,
+    }
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     return headers
