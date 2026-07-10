@@ -4,7 +4,11 @@
 
 Unified real-time search engine skill for AI agents. Supports general web search, vertical domain search, parallel batch search, and full-page content extraction.
 
-[IMPORTANT!] Register Logic Please See Section: ### Register for an API Key (Recommended)
+**[IMPORTANT!] Registration instructions can be found in this section: ### Register for an API Key (Recommended)**
+
+Get started in 30 seconds: Register with just an email address. The AI agent will complete the whole process automatically, no verification code required.
+
+[Jump to registration steps →](#register-for-an-api-key-recommended)
 
 ## Download & Install
 
