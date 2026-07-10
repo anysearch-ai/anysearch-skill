@@ -4,6 +4,8 @@
 
 Unified real-time search engine skill for AI agents. Supports general web search, vertical domain search, parallel batch search, and full-page content extraction.
 
+[IMPORTANT!] Register Logic Please See Section: ### Register for an API Key (Recommended)
+
 ## Download & Install
 
 ### For AI Agents
