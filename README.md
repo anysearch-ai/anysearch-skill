@@ -2,6 +2,8 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+> English | [简体中文](./README_zh.md)
+
 Unified real-time search engine skill for AI agents. Supports general web search, vertical domain search, parallel batch search, and full-page content extraction.
 
 **[IMPORTANT!] Registration instructions can be found in this section: ### Register for an API Key (Recommended)**
