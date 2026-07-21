@@ -16,7 +16,7 @@ if sys.stderr.encoding != "utf-8":
 ENDPOINT = "https://api.anysearch.com/mcp"
 # Identifies access mode + spec version to the backend (X-Anysearch-Client).
 # Keep the version aligned with SKILL.md `version`.
-CLIENT_HEADER = "skill/2.1.0"
+CLIENT_HEADER = "skill/3.0.0"
 
 def _load_env():
     """Load API keys from .env files near the skill.

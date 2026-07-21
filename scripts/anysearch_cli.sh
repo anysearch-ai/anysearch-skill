@@ -5,7 +5,7 @@ export LC_ALL=en_US.UTF-8
 ENDPOINT="https://api.anysearch.com/mcp"
 # Identifies access mode + spec version to the backend (X-Anysearch-Client).
 # Keep the version aligned with SKILL.md `version`.
-CLIENT_HEADER="skill/2.1.0"
+CLIENT_HEADER="skill/3.0.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if ! command -v jq &>/dev/null; then
