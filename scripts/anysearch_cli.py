@@ -316,6 +316,7 @@ def cmd_batch_search(args):
     shared_sub_domain = getattr(args, "batch_sub_domain", None)
     shared_sdp_raw = getattr(args, "batch_sdp", None)
     shared_sdp = _parse_sub_domain_params(shared_sdp_raw) if shared_sdp_raw else None
+    shared_max_results = getattr(args, "batch_max_results", None)
 
     for item in queries:
         if shared_domain and not item.get("domain"):
@@ -324,6 +325,8 @@ def cmd_batch_search(args):
             item["sub_domain"] = shared_sub_domain
         if shared_sdp and not item.get("sub_domain_params"):
             item["sub_domain_params"] = shared_sdp
+        if shared_max_results is not None and item.get("max_results") is None:
+            item["max_results"] = min(shared_max_results, 10)
         # Parse KV string sub_domain_params inside query items
         if isinstance(item.get("sub_domain_params"), str):
             item["sub_domain_params"] = _parse_sub_domain_params(item["sub_domain_params"])
@@ -517,6 +520,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--sub_domain_params", "--sdp", "-p",
         dest="batch_sdp",
         help="Shared sub_domain_params as JSON or key=value pairs, injected into all query items.",
+    )
+    batch_p.add_argument(
+        "--max_results", "-m",
+        dest="batch_max_results",
+        type=int,
+        help="Shared max results (1-10) injected into all query items (item's own max_results takes precedence).",
     )
     batch_p.set_defaults(func=cmd_batch_search)
 

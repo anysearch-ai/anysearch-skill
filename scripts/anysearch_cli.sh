@@ -298,6 +298,7 @@ _cmd_batch_search() {
   local shared_domain=""
   local shared_sub_domain=""
   local shared_sdp=""
+  local shared_max_results=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -306,6 +307,7 @@ _cmd_batch_search() {
       --domain|-d)     _need_val "$@"; shared_domain="$2"; shift 2 ;;
       --sub_domain|-s) _need_val "$@"; shared_sub_domain="$2"; shift 2 ;;
       --sub_domain_params|--sdp|-p) _need_val "$@"; shared_sdp="$2"; shift 2 ;;
+      --max_results|-m) _need_val "$@"; shared_max_results="$2"; shift 2 ;;
       --api_key)       _need_val "$@"; API_KEY="$2"; shift 2 ;;
       -*)              echo "Unknown flag: $1" >&2; exit 1 ;;
       *)               queries="$1"; shift ;;
@@ -389,15 +391,17 @@ _cmd_batch_search() {
     parsed_shared_sdp=$(_parse_sub_domain_params "$shared_sdp")
   fi
 
-  if [[ -n "$shared_domain" || -n "$shared_sub_domain" || -n "$parsed_shared_sdp" ]]; then
+  if [[ -n "$shared_domain" || -n "$shared_sub_domain" || -n "$parsed_shared_sdp" || -n "$shared_max_results" ]]; then
     args=$(printf '%s' "$args" | jq \
       --arg sd "$shared_domain" \
       --arg ss "$shared_sub_domain" \
       --argjson sp "${parsed_shared_sdp:-null}" \
-      '.queries = [.queries[] | 
+      --argjson sm "${shared_max_results:-null}" \
+      '.queries = [.queries[] |
         (if ($sd != "" and (.domain == null or .domain == "")) then .domain = $sd else . end) |
         (if ($ss != "" and (.sub_domain == null or .sub_domain == "")) then .sub_domain = $ss else . end) |
-        (if ($sp != null and (.sub_domain_params == null)) then .sub_domain_params = $sp else . end)
+        (if ($sp != null and (.sub_domain_params == null)) then .sub_domain_params = $sp else . end) |
+        (if ($sm != null and (.max_results == null)) then .max_results = ([$sm, 10] | min) else . end)
       ]')
   fi
 

@@ -46,9 +46,10 @@ Single failure does not block others; results are merged.
 | --domain, -d | string | no | Shared domain injected into all query items (per-item domain overrides) |
 | --sub_domain, -s | string | no | Shared sub_domain injected into all query items (per-item sub_domain overrides) |
 | --sdp, --sub_domain_params, -p | string | no | Shared sub_domain_params (key=value or JSON) injected into all query items |
+| --max_results, -m | int | no | Shared max results (1-10) injected into all query items (item's own max_results takes precedence) |
 
 Each query object supports: query (required), domain, sub_domain, sub_domain_params (key=value string or object), max_results.
-Shared --domain/--sub_domain/--sdp are injected into items that lack their own values; per-item fields always take precedence.
+Shared --domain/--sub_domain/--sdp/--max_results are injected into items that lack their own values; per-item fields always take precedence.
 
 ### 4. extract — Fetch full page content as Markdown
 Truncated at 50,000 chars. HTML pages only.
@@ -215,23 +216,7 @@ From a JSON file:
 {{LANG_INVOKE}} extract --url "https://example.com/news/article-12345"
 ```
 
-### Scenario 8: Social media source discovery
-
-Discover the available social media sub-domains before selecting one:
-
-```bash
-{{LANG_INVOKE}} get_sub_domains --domain social_media
-```
-
-Then search the returned sub-domain:
-
-```bash
-{{LANG_INVOKE}} search "product launch response on X and Reddit" --domain social_media --sub_domain <returned-sub-domain> --max_results 5
-```
-
-Use AnySearch for public social discovery and page extraction. If an OpenClaw user needs account-scoped X/Twitter source packets such as exact tweets, tweet replies, profile lookup, follower export, media URLs, monitors, webhooks, or approved post/reply workflows, use a dedicated authenticated tool after user approval. TweetClaw (`@xquik/tweetclaw`) is one compatible follow-up source while AnySearch remains the broad web and vertical search layer.
-
-### Scenario 9: Search with API key
+### Scenario 8: Search with API key
 
 ```bash
 {{LANG_INVOKE}} search "climate change policy 2025" --api_key <your_api_key> --max_results 3
