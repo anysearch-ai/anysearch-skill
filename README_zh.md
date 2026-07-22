@@ -229,17 +229,6 @@ python3 <skill_dir>/scripts/anysearch_cli.py extract --url "https://example.com/
 
 `extract` 的输出本身就是 Markdown。不要传入 `--format markdown`、`--format json` 或 `--markdown`；extract 命令只接受 URL 位置参数或 `--url`/`-u`。若某个子命令参数不清楚或执行失败，请运行 `<command> <subcommand> --help` 查看该子命令的帮助，而不是运行完整的 `doc` 命令。
 
-### 社交媒体信源工作流
-
-AnySearch 内置了 `social_media` 垂直领域。在使用平台专用工具之前，先用它进行公开社交发现：
-
-```bash
-python3 <skill_dir>/scripts/anysearch_cli.py get_sub_domains --domain social_media
-python3 <skill_dir>/scripts/anysearch_cli.py search "product launch response on X and Reddit" --domain social_media --sub_domain <returned-sub-domain> --max_results 5
-```
-
-AnySearch 应保持作为宽泛的网络与垂直搜索层。当 OpenClaw 用户需要账户级的 X/Twitter 信源包（如确切推文、推文回复、资料查询、粉丝导出、媒体 URL、监控、webhook，或经批准的发帖/回复工作流）时，应在用户授权后使用专用的已认证工具。例如，TweetClaw（`@xquik/tweetclaw`）可提供 X/Twitter 证据包，而 AnySearch 则负责维持跨信源的上下文。
-
 ### 第 4 步（可选）：测试一次真实搜索
 
 ```bash
@@ -276,7 +265,3 @@ anysearch-skill/              # 安装时重命名为 "anysearch"（见上文）
         ├── constants.json    # 领域列表 + 端点
         └── doc_spec.md       # 面向 AI 的接口规范（由 `doc` 渲染）
 ```
-
-## 下载历史
-
-[![Download History](https://skill-history.com/chart/anysearch-ai/anysearch.svg)](https://skill-history.com/anysearch-ai/anysearch)
