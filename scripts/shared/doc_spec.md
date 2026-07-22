@@ -46,9 +46,10 @@ Single failure does not block others; results are merged.
 | --domain, -d | string | no | Shared domain injected into all query items (per-item domain overrides) |
 | --sub_domain, -s | string | no | Shared sub_domain injected into all query items (per-item sub_domain overrides) |
 | --sdp, --sub_domain_params, -p | string | no | Shared sub_domain_params (key=value or JSON) injected into all query items |
+| --max_results, -m | int | no | Shared max results (1-10) injected into all query items (item's own max_results takes precedence) |
 
 Each query object supports: query (required), domain, sub_domain, sub_domain_params (key=value string or object), max_results.
-Shared --domain/--sub_domain/--sdp are injected into items that lack their own values; per-item fields always take precedence.
+Shared --domain/--sub_domain/--sdp/--max_results are injected into items that lack their own values; per-item fields always take precedence.
 
 ### 4. extract — Fetch full page content as Markdown
 Truncated at 50,000 chars. HTML pages only.

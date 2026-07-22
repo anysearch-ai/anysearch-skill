@@ -403,6 +403,7 @@ function Invoke-BatchSearch {
     $sharedDomain = $Opts.SharedDomain
     $sharedSubDomain = $Opts.SharedSubDomain
     $sharedSdp = if ($Opts.SharedSdp) { Parse-SubDomainParams $Opts.SharedSdp } else { $null }
+    $sharedMaxResults = $Opts.SharedMaxResults
 
     $finalQueries = @()
     foreach ($item in $queries) {
@@ -416,6 +417,7 @@ function Invoke-BatchSearch {
         if ($sharedDomain -and -not $q["domain"]) { $q["domain"] = $sharedDomain }
         if ($sharedSubDomain -and -not $q["sub_domain"]) { $q["sub_domain"] = $sharedSubDomain }
         if ($sharedSdp -and -not $q["sub_domain_params"]) { $q["sub_domain_params"] = $sharedSdp }
+        if ($sharedMaxResults -ne $null -and $q["max_results"] -eq $null) { $q["max_results"] = [Math]::Min($sharedMaxResults, 10) }
         # Parse KV string sub_domain_params inside query items
         if ($q["sub_domain_params"] -is [string]) {
             $q["sub_domain_params"] = Parse-SubDomainParams $q["sub_domain_params"]
@@ -569,6 +571,7 @@ switch ($command) {
         $batchDomain = ""
         $batchSubDomain = ""
         $batchSdp = ""
+        $batchMaxResults = $null
         $i = 0
 
         while ($i -lt $rest.Count) {
@@ -583,6 +586,8 @@ switch ($command) {
                 "--sub_domain_params" { $batchSdp = $rest[$i+1]; $i += 2 }
                 "--sdp"     { $batchSdp = $rest[$i+1]; $i += 2 }
                 "-p"        { $batchSdp = $rest[$i+1]; $i += 2 }
+                "--max_results" { $batchMaxResults = [int]$rest[$i+1]; $i += 2 }
+                "-m"        { $batchMaxResults = [int]$rest[$i+1]; $i += 2 }
                 "--api_key" { $apiKey = $rest[$i+1]; $i += 2 }
                 default     {
                     if (-not $positional) { $positional = $rest[$i] }
@@ -600,6 +605,7 @@ switch ($command) {
             SharedDomain   = $batchDomain
             SharedSubDomain = $batchSubDomain
             SharedSdp      = $batchSdp
+            SharedMaxResults = $batchMaxResults
             ApiKey         = $apiKey
         }
     }

@@ -50,9 +50,11 @@ Use these exact command shapes for routine calls. Replace `<cmd>` with the comma
 <cmd> get_sub_domains --domain finance
 <cmd> get_sub_domains --domains finance,health
 
-# Batch search — shared params apply to all queries (per-query fields override).
+# Batch search — shared params (--domain/--sub_domain/--sdp/--max_results) apply to all queries (per-query fields override).
 <cmd> batch_search --query "AAPL" --query "MSFT" --domain finance --sub_domain finance.quote --sdp type=stock,symbol=AAPL,cn_code=
 <cmd> batch_search --queries '[{"query":"AAPL","sub_domain_params":"type=stock,symbol=AAPL,cn_code="},{"query":"MSFT","sub_domain_params":"type=stock,symbol=MSFT,cn_code="}]' --domain finance --sub_domain finance.quote
+# Shared --max_results (1-10) is injected into every query item that doesn't set its own
+<cmd> batch_search --query AAPL --query GOOG --max_results 3
 # Hybrid (mixed domains): omit shared params, specify per-query
 <cmd> batch_search --queries '[{"query":"quantum computing"},{"query":"QBTS","domain":"finance","sub_domain":"finance.quote","sub_domain_params":"type=stock,symbol=QBTS,cn_code="}]'
 

@@ -7,7 +7,7 @@
 - `--sdp key=value` 扁平参数格式
 - `{key:value}` 兼容格式（PowerShell 环境双引号被剥后的退化 JSON）
 - `-p` 短别名
-- `batch_search` 共享参数注入（`--domain` / `--sub_domain` / `--sdp`）
+- `batch_search` 共享参数注入（`--domain` / `--sub_domain` / `--sdp` / `--max_results`）
 - `batch_search` per-item KV 字符串解析
 - `batch_search` hybrid 混合查询
 - `batch_search` 内联 JSON / mangled JSON 的 repair 逻辑
@@ -61,6 +61,7 @@
 |---|---|---|
 | 10 | batch_search：`--query "AAPL stock" --query "MSFT revenue"`，共享 `--domain finance --sub_domain finance.quote --sdp type=stock,symbol=,cn_code=`，不加 per-item 参数 | `## Query 1:` |
 | 11 | batch_search 用 `@文件` 引用 JSON 文件。文件内容：`[{"query":"AAPL earnings","sub_domain_params":"type=stock,symbol=AAPL,cn_code="},{"query":"MSFT revenue","sub_domain_params":"type=stock,symbol=MSFT,cn_code="}]`。共享 `--domain finance --sub_domain finance.quote` | `## Query 1:` |
+| 12 | batch_search：`--query AAPL --query GOOG --max_results 3`，共享 `--max_results` 注入所有 query item（item 自带 max_results 时以 item 为准） | `## Query 1:` |
 
 ---
 
@@ -68,11 +69,11 @@
 
 | # | 需求 | 预期结果第一行 |
 |---|---|---|
-| 12 | batch_search 用 `@文件` 引用 JSON 文件。文件内容：`[{"query":"quantum computing"},{"query":"AAPL stock","domain":"finance","sub_domain":"finance.quote","sub_domain_params":"type=stock,symbol=AAPL,cn_code="}]`。**不加共享参数** | `## Query 1:` |
-| 13 | batch_search 直接传内联 JSON 数组：`[{"query":"test general"},{"query":"AAPL","domain":"finance","sub_domain":"finance.quote","sub_domain_params":"type=stock,symbol=AAPL,cn_code="}]` | `## Query 1:` |
-| 14 | batch_search 传 mangled JSON（无引号 key，模拟 PowerShell 剥引号）：`[{query:test general},{query:AAPL,domain:finance,sub_domain:finance.quote,sub_domain_params:type=stock,symbol=AAPL,cn_code=}]` | `## Query 1:` |
+| 13 | batch_search 用 `@文件` 引用 JSON 文件。文件内容：`[{"query":"quantum computing"},{"query":"AAPL stock","domain":"finance","sub_domain":"finance.quote","sub_domain_params":"type=stock,symbol=AAPL,cn_code="}]`。**不加共享参数** | `## Query 1:` |
+| 14 | batch_search 直接传内联 JSON 数组：`[{"query":"test general"},{"query":"AAPL","domain":"finance","sub_domain":"finance.quote","sub_domain_params":"type=stock,symbol=AAPL,cn_code="}]` | `## Query 1:` |
+| 15 | batch_search 传 mangled JSON（无引号 key，模拟 PowerShell 剥引号）：`[{query:test general},{query:AAPL,domain:finance,sub_domain:finance.quote,sub_domain_params:type=stock,symbol=AAPL,cn_code=}]` | `## Query 1:` |
 
-> ⚠️ 场景 14 验证 batch_search 的 repairJson 逻辑能处理退化 JSON。如果报错（非网络超时），是 bug。
+> ⚠️ 场景 15 验证 batch_search 的 repairJson 逻辑能处理退化 JSON。如果报错（非网络超时），是 bug。
 
 ---
 
@@ -80,15 +81,15 @@
 
 | # | 需求 | 预期结果第一行 |
 |---|---|---|
-| 15 | extract 提取 `https://example.com` 内容 | `## Example Domain` |
-| 16 | search "test" 附带不存在的 flag `--foobar` | 返回 `Unknown flag` 或 `unrecognized arguments` 错误 |
+| 16 | extract 提取 `https://example.com` 内容 | `## Example Domain` |
+| 17 | search "test" 附带不存在的 flag `--foobar` | 返回 `Unknown flag` 或 `unrecognized arguments` 错误 |
 
 ---
 
 ## 通过标准
 
-- 所有 16 个场景的第一行输出匹配上述预期（`## Search Results` / `## Query 1:` / `## finance Domain Capabilities` / `## Example Domain` / 错误提示）
-- 场景 7、14 是本次新增兼容修复，如果在任何 CLI 下报非网络错误 → **回归 bug**
+- 所有 17 个场景的第一行输出匹配上述预期（`## Search Results` / `## Query 1:` / `## finance Domain Capabilities` / `## Example Domain` / 错误提示）
+- 场景 7、15 是本次新增兼容修复，如果在任何 CLI 下报非网络错误 → **回归 bug**
 - 偶发 `Error: No response from API` 或 `Connection Error` 不算失败（网络抖动），重试即可
 
 ## 执行方式

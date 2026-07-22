@@ -314,11 +314,13 @@ async function cmdBatchSearch(opts) {
   const sharedDomain = opts.domain;
   const sharedSubDomain = opts.subDomain;
   const sharedSdp = opts.subDomainParams ? parseSubDomainParams(opts.subDomainParams) : undefined;
+  const sharedMaxResults = opts.maxResults;
 
   for (const item of queries) {
     if (sharedDomain && !item.domain) item.domain = sharedDomain;
     if (sharedSubDomain && !item.sub_domain) item.sub_domain = sharedSubDomain;
     if (sharedSdp && !item.sub_domain_params) item.sub_domain_params = sharedSdp;
+    if (sharedMaxResults !== undefined && item.max_results == null) item.max_results = Math.min(sharedMaxResults, 10);
     // Parse string sub_domain_params inside query items (KV or {key:value} format)
     if (typeof item.sub_domain_params === "string") {
       item.sub_domain_params = parseSubDomainParams(item.sub_domain_params);
@@ -430,6 +432,7 @@ function parseArgs(argv) {
       opts.domain = undefined;
       opts.subDomain = undefined;
       opts.subDomainParams = undefined;
+      opts.maxResults = undefined;
       let positional = undefined;
       while (rest.length > 0) {
         const flag = rest.shift();
@@ -439,6 +442,7 @@ function parseArgs(argv) {
           case "--domain": case "-d": opts.domain = shiftVal(); break;
           case "--sub_domain": case "-s": opts.subDomain = shiftVal(); break;
           case "--sub_domain_params": case "--sdp": case "-p": opts.subDomainParams = shiftVal(); break;
+          case "--max_results": case "-m": opts.maxResults = parseInt(shiftVal(), 10); break;
           case "--api_key": opts.apiKey = shiftVal(); break;
           default:
             if (!positional) positional = flag;
