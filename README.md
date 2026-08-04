@@ -254,7 +254,6 @@ anysearch-skill/              # renamed to "anysearch" on install (see above)
 ├── SKILL.md                  # Skill definition for AI agents
 ├── README.md                 # This file
 ├── SECURITY.md               # Security policy / vulnerability reporting
-├── TEST_PLAN.md              # End-to-end test plan
 └── scripts/
     ├── anysearch_cli.py      # Python CLI
     ├── anysearch_cli.js      # Node.js CLI
