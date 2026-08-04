@@ -254,7 +254,6 @@ anysearch-skill/              # 安装时重命名为 "anysearch"（见上文）
 ├── SKILL.md                  # 面向 AI 智能体的 skill 定义
 ├── README.md                 # 英文说明文件
 ├── SECURITY.md               # 安全策略 / 漏洞报告
-├── TEST_PLAN.md              # 端到端测试计划
 └── scripts/
     ├── anysearch_cli.py      # Python CLI
     ├── anysearch_cli.js      # Node.js CLI
