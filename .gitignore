@@ -2,3 +2,5 @@
 runtime.conf
 __pycache__
 .idea
+# pi subagent session artifacts
+.pi-subagents/
