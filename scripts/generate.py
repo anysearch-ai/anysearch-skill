@@ -39,38 +39,61 @@ def load_constants():
 def render_constants(ext, constants):
     """Render constants block in the target language syntax."""
     domains = constants["available_domains"]
+    tags = [t for tags in constants["available_tags"].values() for t in tags]
+    rest_endpoint = constants["rest_endpoint"]
 
     if ext == ".py":
         lines = []
+        lines.append("REST_ENDPOINT = " + json.dumps(rest_endpoint))
         lines.append("AVAILABLE_DOMAINS = [")
         for i in range(0, len(domains), 6):
             chunk = domains[i:i+6]
             lines.append("    " + ", ".join(f'"{d}"' for d in chunk) + ",")
         lines.append("]")
+        lines.append("AVAILABLE_TAGS = [")
+        for i in range(0, len(tags), 6):
+            chunk = tags[i:i+6]
+            lines.append("    " + ", ".join(f'"{t}"' for t in chunk) + ",")
+        lines.append("]")
         return "\n".join(lines)
 
     elif ext == ".js":
         lines = []
+        lines.append(f"const REST_ENDPOINT = {json.dumps(rest_endpoint)};")
         lines.append("const AVAILABLE_DOMAINS = [")
         for i in range(0, len(domains), 6):
             chunk = domains[i:i+6]
             lines.append("  " + ",".join(f'"{d}"' for d in chunk) + ",")
         lines.append("];")
+        lines.append("const AVAILABLE_TAGS = [")
+        for i in range(0, len(tags), 6):
+            chunk = tags[i:i+6]
+            lines.append("  " + ",".join(f'"{t}"' for t in chunk) + ",")
+        lines.append("];")
         return "\n".join(lines)
 
     elif ext == ".ps1":
         lines = []
+        lines.append(f'$REST_ENDPOINT = "{rest_endpoint}"')
         lines.append("$AVAILABLE_DOMAINS = @(")
         chunks = [domains[i:i+6] for i in range(0, len(domains), 6)]
         for idx, chunk in enumerate(chunks):
             suffix = "," if idx < len(chunks) - 1 else ""
             lines.append("    " + ", ".join(f'"{d}"' for d in chunk) + suffix)
         lines.append(")")
+        lines.append("$AVAILABLE_TAGS = @(")
+        chunks = [tags[i:i+6] for i in range(0, len(tags), 6)]
+        for idx, chunk in enumerate(chunks):
+            suffix = "," if idx < len(chunks) - 1 else ""
+            lines.append("    " + ", ".join(f'"{t}"' for t in chunk) + suffix)
+        lines.append(")")
         return "\n".join(lines)
 
     elif ext == ".sh":
         lines = []
+        lines.append(f'REST_ENDPOINT="{rest_endpoint}"')
         lines.append("AVAILABLE_DOMAINS=(" + " ".join(f'"{d}"' for d in domains) + ")")
+        lines.append("AVAILABLE_TAGS=(" + " ".join(f'"{t}"' for t in tags) + ")")
         return "\n".join(lines)
 
     raise ValueError(f"Unsupported extension: {ext}")
@@ -91,6 +114,8 @@ def render_doc_block(ext, constants):
     _tpl = _tpl.replace("{{LANG_CODEBLOCK}}", "")
     _tpl = _tpl.replace("{{LANG_INVOKE}}", "python scripts/anysearch_cli.py")
     _tpl = _tpl.replace("{{DOMAINS_SPACE}}", " ".join(_c["available_domains"]))
+    _tags = "\\n".join("- " + _d + ": " + ", ".join(_c["available_tags"][_d]) for _d in _c["available_tags"])
+    _tpl = _tpl.replace("{{TAGS_SPACE}}", _tags)
     return _tpl'''
 
     elif ext == ".js":
@@ -102,6 +127,10 @@ def render_doc_block(ext, constants):
   tpl = tpl.replace(/\\{\\{LANG_CODEBLOCK\\}\\}/g, "");
   tpl = tpl.replace(/\\{\\{LANG_INVOKE\\}\\}/g, "node scripts/anysearch_cli.js");
   tpl = tpl.replace(/\\{\\{DOMAINS_SPACE\\}\\}/g, c.available_domains.join(" "));
+  const tags = Object.entries(c.available_tags)
+    .map(([d, ts]) => "- " + d + ": " + ts.join(", "))
+    .join("\\n");
+  tpl = tpl.replace(/\\{\\{TAGS_SPACE\\}\\}/g, tags);
   return tpl;
 }'''
 
@@ -114,6 +143,8 @@ def render_doc_block(ext, constants):
     $tpl = $tpl.Replace("{{LANG_CODEBLOCK}}", "powershell")
     $tpl = $tpl.Replace("{{LANG_INVOKE}}", "powershell -ExecutionPolicy Bypass -File scripts/anysearch_cli.ps1")
     $tpl = $tpl.Replace("{{DOMAINS_SPACE}}", ($c.available_domains -join " "))
+    $tags = ($c.available_tags.PSObject.Properties | ForEach-Object { "- " + $_.Name + ": " + ($_.Value -join ", ") }) -join [Environment]::NewLine
+    $tpl = $tpl.Replace("{{TAGS_SPACE}}", $tags)
     return $tpl
 }'''
 
@@ -124,10 +155,13 @@ def render_doc_block(ext, constants):
   tpl=$(cat "$shared/doc_spec.md")
   local domains
   domains=$(jq -r '.available_domains | join(" ")' "$shared/constants.json")
+  local tags
+  tags=$(jq -r '.available_tags | to_entries[] | "- " + .key + ": " + (.value | join(", "))' "$shared/constants.json")
   tpl="${tpl//\{\{LANG_NAME\}\}/Bash}"
   tpl="${tpl//\{\{LANG_CODEBLOCK\}\}/bash}"
   tpl="${tpl//\{\{LANG_INVOKE\}\}/bash scripts/anysearch_cli.sh}"
   tpl="${tpl//\{\{DOMAINS_SPACE\}\}/$domains}"
+  tpl="${tpl//\{\{TAGS_SPACE\}\}/$tags}"
   printf '%s\n' "$tpl"
 }'''
 

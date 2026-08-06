@@ -14,6 +14,8 @@ if sys.stderr.encoding != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 ENDPOINT = "https://api.anysearch.com/mcp"
+# REST search endpoint (single-query search; supports tag/params/zone/language/format)
+# is defined in the GENERATED:CONSTANTS block below (sourced from shared/constants.json).
 # Identifies access mode + spec version to the backend (X-Anysearch-Client).
 # Keep the version aligned with SKILL.md `version`.
 CLIENT_HEADER = "skill/3.0.1"
@@ -49,10 +51,20 @@ _load_env()
 
 
 # BEGIN GENERATED:CONSTANTS
+REST_ENDPOINT = "https://api.anysearch.com/v1/search"
 AVAILABLE_DOMAINS = [
     "general", "resource", "social_media", "finance", "academic", "legal",
     "health", "business", "security", "ip", "code", "energy",
     "environment", "agriculture", "travel", "film", "gaming",
+]
+AVAILABLE_TAGS = [
+    "academic.biomedical", "academic.citation", "academic.dataset", "academic.preprint", "academic.search", "agriculture.fao",
+    "business.company", "business.jobs", "business.people", "business.trade", "code.doc", "code.snippet",
+    "energy.electricity", "energy.production", "environment.aqi", "film.torrent", "finance.calendar", "finance.fundamental",
+    "finance.macro", "finance.news", "finance.quote", "finance.screen", "gaming.esports", "gaming.store",
+    "general.general", "health.drug", "health.stats", "health.trial", "ip.global", "legal.case",
+    "legal.legislation", "legal.statute", "resource.image", "security.intel", "security.noise", "security.scan",
+    "security.vuln", "social_media.social_media", "travel.flight", "travel.flight_status",
 ]
 # END GENERATED:CONSTANTS
 
@@ -67,6 +79,7 @@ def _build_headers(api_key: str) -> dict:
     return headers
 
 def _call_api(tool_name: str, arguments: dict, api_key: str) -> str:
+    """Call the MCP JSON-RPC endpoint (batch_search / extract / get_sub_domains)."""
     payload = {
         "jsonrpc": "2.0",
         "id": 1,
@@ -102,6 +115,41 @@ def _call_api(tool_name: str, arguments: dict, api_key: str) -> str:
         if item.get("type") == "text":
             return item.get("text", "")
     return json.dumps(result, indent=2, ensure_ascii=False)
+
+
+def _call_rest_search(arguments: dict, api_key: str) -> str:
+    """Call the REST /v1/search endpoint (single-query search).
+
+    Success responses are {code: 0, message, request_id, data: {results, metadata}}.
+    Errors carry {code: !=0, message, request_id} (sometimes with HTTP 4xx/5xx)
+    and may include a data payload (e.g. auto-registered credentials on 402).
+    """
+    try:
+        resp = requests.post(REST_ENDPOINT, json=arguments, headers=_build_headers(api_key), timeout=30)
+        try:
+            data = resp.json()
+        except ValueError:
+            print(f"Invalid JSON response: {resp.text[:500]}", file=sys.stderr)
+            sys.exit(1)
+    except requests.exceptions.ConnectionError:
+        print("Connection Error: Unable to reach the API endpoint.", file=sys.stderr)
+        sys.exit(1)
+    except requests.exceptions.Timeout:
+        print("Timeout: The API request timed out.", file=sys.stderr)
+        sys.exit(1)
+
+    if resp.status_code >= 400 or data.get("code", 0) != 0:
+        msg = data.get("message") or f"HTTP {resp.status_code}"
+        rid = data.get("request_id", "")
+        detail = f" (request_id: {rid})" if rid else ""
+        print(f"API Error: {msg}{detail}", file=sys.stderr)
+        if isinstance(data.get("data"), dict) and data["data"]:
+            # e.g. 402 quota payload with auto-registered credentials, or
+            # rate-limit info (retry_after / limit / remaining / reset_at).
+            print(f"Response data: {json.dumps(data['data'], ensure_ascii=False)}", file=sys.stderr)
+        sys.exit(1)
+
+    return json.dumps(data, indent=2, ensure_ascii=False)
 
 
 def _parse_json_list(value: str) -> list:
@@ -150,24 +198,35 @@ def _parse_sub_domain_params(value: str):
 
 
 def cmd_search(args):
-    """Execute search (general or vertical)."""
+    """Execute search via the REST /v1/search endpoint (general or vertical).
+
+    Vertical routing: pass --tag (e.g. finance.quote) plus --params for the
+    tag's schema, or use the legacy --domain + --sub_domain + --sdp aliases.
+    """
     arguments = {"query": args.query}
 
+    if args.tag:
+        arguments["tag"] = args.tag
     if args.domain:
         arguments["domain"] = args.domain
         if args.sub_domain:
             arguments["sub_domain"] = args.sub_domain
-        if args.sub_domain_params:
-            parsed = _parse_sub_domain_params(args.sub_domain_params)
-            if not parsed:
-                print("Error: --sub_domain_params must be valid JSON or key=value pairs", file=sys.stderr)
-                sys.exit(1)
-            arguments["sub_domain_params"] = parsed
-
+    if args.params:
+        parsed = _parse_sub_domain_params(args.params)
+        if not parsed:
+            print("Error: --params must be valid JSON or key=value pairs", file=sys.stderr)
+            sys.exit(1)
+        arguments["params"] = parsed
+    if args.zone:
+        arguments["zone"] = args.zone
+    if args.language:
+        arguments["language"] = args.language
+    if args.format:
+        arguments["format"] = args.format
     if args.max_results is not None:
-        arguments["max_results"] = min(args.max_results, 10)
+        arguments["max_results"] = max(1, min(args.max_results, 20))
 
-    print(_call_api("search", arguments, args.api_key))
+    print(_call_rest_search(arguments, args.api_key))
 
 
 def cmd_get_sub_domains(args):
@@ -312,6 +371,7 @@ def cmd_batch_search(args):
         sys.exit(1)
 
     # Inject shared params into each query item (item's own fields take precedence)
+    shared_tag = getattr(args, "batch_tag", None)
     shared_domain = getattr(args, "batch_domain", None)
     shared_sub_domain = getattr(args, "batch_sub_domain", None)
     shared_sdp_raw = getattr(args, "batch_sdp", None)
@@ -319,6 +379,8 @@ def cmd_batch_search(args):
     shared_max_results = getattr(args, "batch_max_results", None)
 
     for item in queries:
+        if shared_tag and not item.get("tag"):
+            item["tag"] = shared_tag
         if shared_domain and not item.get("domain"):
             item["domain"] = shared_domain
         if shared_sub_domain and not item.get("sub_domain"):
@@ -326,10 +388,11 @@ def cmd_batch_search(args):
         if shared_sdp and not item.get("sub_domain_params"):
             item["sub_domain_params"] = shared_sdp
         if shared_max_results is not None and item.get("max_results") is None:
-            item["max_results"] = min(shared_max_results, 10)
-        # Parse KV string sub_domain_params inside query items
-        if isinstance(item.get("sub_domain_params"), str):
-            item["sub_domain_params"] = _parse_sub_domain_params(item["sub_domain_params"])
+            item["max_results"] = max(1, min(shared_max_results, 10))
+        # Parse KV string params / sub_domain_params inside query items
+        for key in ("params", "sub_domain_params"):
+            if isinstance(item.get(key), str):
+                item[key] = _parse_sub_domain_params(item[key])
 
     arguments = {"queries": queries}
     print(_call_api("batch_search", arguments, args.api_key))
@@ -348,6 +411,8 @@ def _render_doc():
     _tpl = _tpl.replace("{{LANG_CODEBLOCK}}", "")
     _tpl = _tpl.replace("{{LANG_INVOKE}}", "python scripts/anysearch_cli.py")
     _tpl = _tpl.replace("{{DOMAINS_SPACE}}", " ".join(_c["available_domains"]))
+    _tags = "\n".join("- " + _d + ": " + ", ".join(_c["available_tags"][_d]) for _d in _c["available_tags"])
+    _tpl = _tpl.replace("{{TAGS_SPACE}}", _tags)
     return _tpl
 # END GENERATED:DOC_SPEC
 
@@ -368,11 +433,13 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "examples:\n"
-            "  anysearch search \"quantum computing\"\n"
-            "  anysearch search \"AAPL\" --domain finance --sub_domain finance.quote\n"
-            "  anysearch get_sub_domains --domain finance\n"
-            "  anysearch extract --url https://example.com\n"
-            "  anysearch batch_search --queries '[{\"query\":\"AAPL\"},{\"query\":\"GOOG\"}]'\n"
+            '  anysearch search "quantum computing"\n'
+            '  anysearch search "AAPL" --tag finance.quote --params type=stock,symbol=AAPL,cn_code=\n'
+            '  anysearch search "react hooks" --tag code.doc --params library=react\n'
+            '  anysearch search "\u4eba\u5de5\u667a\u80fd \u65b0\u95fb" --zone cn --language zh-CN\n'
+            '  anysearch get_sub_domains --domain finance\n'
+            '  anysearch extract --url https://example.com\n'
+            '  anysearch batch_search --queries \'[{"query":"AAPL"},{"query":"GOOG"}]\'\n'
         ),
     )
 
@@ -389,36 +456,60 @@ def build_parser() -> argparse.ArgumentParser:
         "search",
         help="Search the web (general or vertical domain search)",
         description=(
-            "Execute a search query.\n\n"
+            "Execute a search query via the REST /v1/search endpoint.\n\n"
             "Two modes:\n"
-            "  General search:   omit --domain (open-ended natural language queries)\n"
-            "  Vertical search:  specify --domain and --sub_domain for structured queries\n\n"
+            "  General search:   omit --tag/--domain (open-ended natural language queries)\n"
+            "  Vertical search:  specify --tag (e.g. finance.quote) with --params, or the\n"
+            "                    legacy --domain + --sub_domain for structured queries\n\n"
             "For vertical search, run 'get_sub_domains' first to discover available\n"
-            "sub_domains and their required query formats."
+            "sub_domains (they equal the valid --tag values) and their required params."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     search_p.add_argument("query", help="Search query string. For vertical search, follow the format returned by get_sub_domains.")
     search_p.add_argument(
+        "--tag", "-t",
+        help=(
+            "Sub-domain capability tag '{domain}.{sub_domain}', e.g. code.doc, finance.quote. "
+            "Routes the query to the vertical capability. "
+            "Obtain valid tags via get_sub_domains (the backend validates the tag)."
+        ),
+    )
+    search_p.add_argument(
         "--domain", "-d",
         choices=AVAILABLE_DOMAINS,
         help=(
-            "Vertical domain for structured search. "
+            "Vertical domain for structured search (legacy alias of the domain part of --tag). "
             f"Available: {', '.join(AVAILABLE_DOMAINS)}"
         ),
     )
     search_p.add_argument(
         "--sub_domain", "-s",
-        help="Sub-domain routing key (e.g. finance.quote). Required for vertical search; obtain via get_sub_domains.",
+        help="Sub-domain routing key (e.g. finance.quote). Legacy alias of --tag; obtain via get_sub_domains.",
     )
     search_p.add_argument(
-        "--sub_domain_params", "--sdp", "-p",
-        help="Sub_domain parameters as JSON or key=value pairs (e.g. type=stock,symbol=AAPL,cn_code=). Schema depends on the sub_domain (see get_sub_domains output).",
+        "--params", "--sub_domain_params", "--sdp", "-p",
+        dest="params",
+        help="Params for the tag schema as JSON or key=value pairs (e.g. type=stock,symbol=AAPL,cn_code=). Schema depends on the sub_domain (see get_sub_domains output).",
+    )
+    search_p.add_argument(
+        "--zone",
+        choices=["cn", "intl"],
+        help="Region preference: cn or intl.",
+    )
+    search_p.add_argument(
+        "--language",
+        help="Preferred result language, e.g. zh-CN, en.",
+    )
+    search_p.add_argument(
+        "--format",
+        choices=["json", "markdown"],
+        help="Output format: json (default) or markdown.",
     )
     search_p.add_argument(
         "--max_results", "-m",
         type=int,
-        help="Maximum number of results to return (1-10, default 10).",
+        help="Maximum number of results to return (1-20, default 10).",
     )
     search_p.set_defaults(func=cmd_search)
 
@@ -506,6 +597,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Shorthand: repeatable single-query string. Easier for PowerShell. Up to 5.",
     )
     batch_p.add_argument(
+        "--tag", "-t",
+        dest="batch_tag",
+        help="Shared tag injected into all query items (item's own tag/domain takes precedence).",
+    )
+    batch_p.add_argument(
         "--domain", "-d",
         dest="batch_domain",
         choices=AVAILABLE_DOMAINS,
@@ -517,9 +613,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Shared sub_domain injected into all query items (item's own sub_domain takes precedence).",
     )
     batch_p.add_argument(
-        "--sub_domain_params", "--sdp", "-p",
+        "--params", "--sub_domain_params", "--sdp", "-p",
         dest="batch_sdp",
-        help="Shared sub_domain_params as JSON or key=value pairs, injected into all query items.",
+        help="Shared params as JSON or key=value pairs, injected into all query items.",
     )
     batch_p.add_argument(
         "--max_results", "-m",

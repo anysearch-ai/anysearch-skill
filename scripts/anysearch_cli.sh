@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
+# Force UTF-8 output where possible; fall back gracefully when the preferred
+# locale is not installed (avoids a setlocale warning on every invocation).
+for _loc in en_US.UTF-8 C.UTF-8 C.utf8 C; do
+  if locale -a 2>/dev/null | grep -qxi "$_loc"; then
+    export LANG="$_loc"
+    export LC_ALL="$_loc"
+    break
+  fi
+done
+unset _loc
 
 ENDPOINT="https://api.anysearch.com/mcp"
 # Identifies access mode + spec version to the backend (X-Anysearch-Client).
@@ -121,8 +129,60 @@ _parse_sub_domain_params() {
 }
 
 # BEGIN GENERATED:CONSTANTS
+REST_ENDPOINT="https://api.anysearch.com/v1/search"
 AVAILABLE_DOMAINS=("general" "resource" "social_media" "finance" "academic" "legal" "health" "business" "security" "ip" "code" "energy" "environment" "agriculture" "travel" "film" "gaming")
+AVAILABLE_TAGS=("academic.biomedical" "academic.citation" "academic.dataset" "academic.preprint" "academic.search" "agriculture.fao" "business.company" "business.jobs" "business.people" "business.trade" "code.doc" "code.snippet" "energy.electricity" "energy.production" "environment.aqi" "film.torrent" "finance.calendar" "finance.fundamental" "finance.macro" "finance.news" "finance.quote" "finance.screen" "gaming.esports" "gaming.store" "general.general" "health.drug" "health.stats" "health.trial" "ip.global" "legal.case" "legal.legislation" "legal.statute" "resource.image" "security.intel" "security.noise" "security.scan" "security.vuln" "social_media.social_media" "travel.flight" "travel.flight_status")
 # END GENERATED:CONSTANTS
+
+_call_rest_search() {
+  # Call the REST /v1/search endpoint (single-query search). The response is
+  # JSON: success carries code==0; errors carry a non-zero code (sometimes
+  # with HTTP 4xx/5xx), a message, and optionally a data payload (e.g.
+  # auto-registered credentials on 402 quota exhaustion).
+  local arguments="$1"
+  local auth_args=()
+  if [[ -n "$API_KEY" ]]; then
+    auth_args+=(-H "Authorization: Bearer $API_KEY")
+  fi
+
+  local response http_code body
+  response=$(curl -s -w '\n%{http_code}' -X POST "$REST_ENDPOINT" \
+    -H "Content-Type: application/json" \
+    -H "X-Anysearch-Client: $CLIENT_HEADER" \
+    "${auth_args[@]}" \
+    -d "$arguments" \
+    --max-time 30 2>/dev/null)
+
+  http_code="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+
+  if [[ ! "$http_code" =~ ^[0-9]+$ || "$http_code" == "000" ]]; then
+    echo "Error: No response from API" >&2
+    exit 1
+  fi
+
+  local code
+  code=$(printf '%s' "$body" | jq -r '.code // 0' 2>/dev/null)
+  if (( 10#$http_code >= 400 )) || [[ "$code" != "0" ]]; then
+    local msg rid
+    msg=$(printf '%s' "$body" | jq -r '.message // empty' 2>/dev/null)
+    rid=$(printf '%s' "$body" | jq -r '.request_id // empty' 2>/dev/null)
+    if [[ -n "$msg" ]]; then
+      echo "API Error: $msg${rid:+ (request_id: $rid)}" >&2
+    else
+      echo "HTTP Error $http_code: $body" >&2
+    fi
+    local rdata
+    rdata=$(printf '%s' "$body" | jq -c '.data // empty' 2>/dev/null)
+    if [[ -n "$rdata" && "$rdata" != "{}" && "$rdata" != "null" ]]; then
+      echo "Response data: $rdata" >&2
+    fi
+    exit 1
+  fi
+
+  # Pretty-print the success JSON.
+  printf '%s\n' "$(printf '%s' "$body" | jq . 2>/dev/null || printf '%s' "$body")"
+}
 
 _call_api() {
   local tool_name="$1"
@@ -188,20 +248,28 @@ _call_api() {
 
 _cmd_search() {
   local query=""
+  local tag=""
   local domain=""
   local sub_domain=""
-  local sub_domain_params=""
+  local params=""
+  local zone=""
+  local language=""
+  local format=""
   local max_results=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --domain|-d)     _need_val "$@"; domain="$2"; shift 2 ;;
-      --sub_domain|-s) _need_val "$@"; sub_domain="$2"; shift 2 ;;
-      --sub_domain_params|--sdp|-p) _need_val "$@"; sub_domain_params="$2"; shift 2 ;;
-      --max_results|-m) _need_val "$@"; max_results="$2"; shift 2 ;;
-      --api_key)       _need_val "$@"; API_KEY="$2"; shift 2 ;;
-      -*)              echo "Unknown flag: $1" >&2; _usage; exit 1 ;;
-      *)               query="$1"; shift ;;
+      --tag|-t)          _need_val "$@"; tag="$2"; shift 2 ;;
+      --domain|-d)       _need_val "$@"; domain="$2"; shift 2 ;;
+      --sub_domain|-s)   _need_val "$@"; sub_domain="$2"; shift 2 ;;
+      --params|--sub_domain_params|--sdp|-p) _need_val "$@"; params="$2"; shift 2 ;;
+      --zone)            _need_val "$@"; zone="$2"; shift 2 ;;
+      --language)        _need_val "$@"; language="$2"; shift 2 ;;
+      --format)          _need_val "$@"; format="$2"; shift 2 ;;
+      --max_results|-m)  _need_val "$@"; max_results="$2"; shift 2 ;;
+      --api_key)         _need_val "$@"; API_KEY="$2"; shift 2 ;;
+      -*)                echo "Unknown flag: $1" >&2; _usage; exit 1 ;;
+      *)                 query="$1"; shift ;;
     esac
   done
 
@@ -213,29 +281,44 @@ _cmd_search() {
   local args
   args=$(jq -n --arg q "$query" '{"query":$q}')
 
+  if [[ -n "$tag" ]]; then
+    args=$(printf '%s' "$args" | jq --arg t "$tag" '. + {"tag":$t}')
+  fi
   if [[ -n "$domain" ]]; then
     args=$(printf '%s' "$args" | jq --arg d "$domain" '. + {"domain":$d}')
-    if [[ -n "$sub_domain" ]]; then
-      args=$(printf '%s' "$args" | jq --arg s "$sub_domain" '. + {"sub_domain":$s}')
+  fi
+  if [[ -n "$sub_domain" ]]; then
+    args=$(printf '%s' "$args" | jq --arg s "$sub_domain" '. + {"sub_domain":$s}')
+  fi
+  if [[ -n "$params" ]]; then
+    local parsed_params
+    parsed_params=$(_parse_sub_domain_params "$params")
+    if [[ -n "$parsed_params" && "$parsed_params" != "{}" ]]; then
+      args=$(printf '%s' "$args" | jq --argjson p "$parsed_params" '. + {"params":$p}')
     fi
-    if [[ -n "$sub_domain_params" ]]; then
-      local parsed_sdp
-      parsed_sdp=$(_parse_sub_domain_params "$sub_domain_params")
-      if [[ -n "$parsed_sdp" && "$parsed_sdp" != "{}" ]]; then
-        args=$(printf '%s' "$args" | jq --argjson p "$parsed_sdp" '. + {"sub_domain_params":$p}')
-      fi
-    fi
+  fi
+  if [[ -n "$zone" ]]; then
+    args=$(printf '%s' "$args" | jq --arg z "$zone" '. + {"zone":$z}')
+  fi
+  if [[ -n "$language" ]]; then
+    args=$(printf '%s' "$args" | jq --arg l "$language" '. + {"language":$l}')
+  fi
+  if [[ -n "$format" ]]; then
+    args=$(printf '%s' "$args" | jq --arg f "$format" '. + {"format":$f}')
   fi
 
   if [[ -n "$max_results" ]]; then
-    if [[ "$max_results" -gt 10 ]]; then
-      max_results=10
+    if [[ "$max_results" -lt 1 ]]; then
+      max_results=1
+    elif [[ "$max_results" -gt 20 ]]; then
+      max_results=20
     fi
     args=$(printf '%s' "$args" | jq --argjson m "$max_results" '. + {"max_results":$m}')
   fi
 
-  _call_api "search" "$args"
+  _call_rest_search "$args"
 }
+
 
 _cmd_get_sub_domains() {
   local domain=""
@@ -295,6 +378,7 @@ _cmd_extract() {
 _cmd_batch_search() {
   local queries=""
   local query_items=()
+  local shared_tag=""
   local shared_domain=""
   local shared_sub_domain=""
   local shared_sdp=""
@@ -304,9 +388,10 @@ _cmd_batch_search() {
     case "$1" in
       --queries|-q)    _need_val "$@"; queries="$2"; shift 2 ;;
       --query)         _need_val "$@"; query_items+=("$2"); shift 2 ;;
+      --tag|-t)        _need_val "$@"; shared_tag="$2"; shift 2 ;;
       --domain|-d)     _need_val "$@"; shared_domain="$2"; shift 2 ;;
       --sub_domain|-s) _need_val "$@"; shared_sub_domain="$2"; shift 2 ;;
-      --sub_domain_params|--sdp|-p) _need_val "$@"; shared_sdp="$2"; shift 2 ;;
+      --params|--sub_domain_params|--sdp|-p) _need_val "$@"; shared_sdp="$2"; shift 2 ;;
       --max_results|-m) _need_val "$@"; shared_max_results="$2"; shift 2 ;;
       --api_key)       _need_val "$@"; API_KEY="$2"; shift 2 ;;
       -*)              echo "Unknown flag: $1" >&2; exit 1 ;;
@@ -391,24 +476,35 @@ _cmd_batch_search() {
     parsed_shared_sdp=$(_parse_sub_domain_params "$shared_sdp")
   fi
 
-  if [[ -n "$shared_domain" || -n "$shared_sub_domain" || -n "$parsed_shared_sdp" || -n "$shared_max_results" ]]; then
+  if [[ -n "$shared_domain" || -n "$shared_sub_domain" || -n "$parsed_shared_sdp" || -n "$shared_max_results" || -n "$shared_tag" ]]; then
     args=$(printf '%s' "$args" | jq \
+      --arg st "$shared_tag" \
       --arg sd "$shared_domain" \
       --arg ss "$shared_sub_domain" \
       --argjson sp "${parsed_shared_sdp:-null}" \
       --argjson sm "${shared_max_results:-null}" \
       '.queries = [.queries[] |
+        (if ($st != "" and (.tag == null or .tag == "")) then .tag = $st else . end) |
         (if ($sd != "" and (.domain == null or .domain == "")) then .domain = $sd else . end) |
         (if ($ss != "" and (.sub_domain == null or .sub_domain == "")) then .sub_domain = $ss else . end) |
-        (if ($sp != null and (.sub_domain_params == null)) then .sub_domain_params = $sp else . end) |
-        (if ($sm != null and (.max_results == null)) then .max_results = ([$sm, 10] | min) else . end)
+        (if ($sp != null and (.params == null) and (.sub_domain_params == null)) then .params = $sp else . end) |
+        (if ($sm != null and (.max_results == null)) then .max_results = (([$sm, 10] | min) | if . < 1 then 1 else . end) else . end)
       ]')
   fi
 
-  # Parse string sub_domain_params inside query items to objects
+  # Parse string params / sub_domain_params inside query items to objects
   args=$(printf '%s' "$args" | jq '
     .queries = [.queries[] |
-      if (.sub_domain_params | type) == "string" then
+      (if (.params | type) == "string" then
+        if (.params | startswith("{")) then
+          # {key:value} format (PowerShell-mangled JSON)
+          .params = (.params | ltrimstr("{") | rtrimstr("}") | split(",") | map(split(":") | {(.[0] | gsub("^\\s+|\\s+$|[\"'"'"']";"")): (.[1:] | join(":") | gsub("^\\s+|\\s+$|[\"'"'"']";""))}) | add // {})
+        else
+          # key=value format
+          .params = (.params | split(",") | map(split("=") | {(.[0] | gsub("^\\s+|\\s+$";"")): (.[1:] | join("=") | gsub("^\\s+|\\s+$";""))}) | add // {})
+        end
+      else . end) |
+      (if (.sub_domain_params | type) == "string" then
         if (.sub_domain_params | startswith("{")) then
           # {key:value} format (PowerShell-mangled JSON)
           .sub_domain_params = (.sub_domain_params | ltrimstr("{") | rtrimstr("}") | split(",") | map(split(":") | {(.[0] | gsub("^\\s+|\\s+$|[\"'"'"']";"")): (.[1:] | join(":") | gsub("^\\s+|\\s+$|[\"'"'"']";""))}) | add // {})
@@ -416,7 +512,7 @@ _cmd_batch_search() {
           # key=value format
           .sub_domain_params = (.sub_domain_params | split(",") | map(split("=") | {(.[0] | gsub("^\\s+|\\s+$";"")): (.[1:] | join("=") | gsub("^\\s+|\\s+$";""))}) | add // {})
         end
-      else . end
+      else . end)
     ]')
 
   _call_api "batch_search" "$args"
@@ -429,10 +525,13 @@ _cmd_doc() {
   tpl=$(cat "$shared/doc_spec.md")
   local domains
   domains=$(jq -r '.available_domains | join(" ")' "$shared/constants.json")
+  local tags
+  tags=$(jq -r '.available_tags | to_entries[] | "- " + .key + ": " + (.value | join(", "))' "$shared/constants.json")
   tpl="${tpl//\{\{LANG_NAME\}\}/Bash}"
   tpl="${tpl//\{\{LANG_CODEBLOCK\}\}/bash}"
   tpl="${tpl//\{\{LANG_INVOKE\}\}/bash scripts/anysearch_cli.sh}"
   tpl="${tpl//\{\{DOMAINS_SPACE\}\}/$domains}"
+  tpl="${tpl//\{\{TAGS_SPACE\}\}/$tags}"
   printf '%s\n' "$tpl"
 }
 # END GENERATED:DOC_SPEC

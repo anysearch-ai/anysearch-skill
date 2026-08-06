@@ -1,8 +1,28 @@
 {
   "endpoint": "https://api.anysearch.com/mcp",
+  "rest_endpoint": "https://api.anysearch.com/v1/search",
   "available_domains": [
     "general", "resource", "social_media", "finance", "academic",
     "legal", "health", "business", "security", "ip", "code",
     "energy", "environment", "agriculture", "travel", "film", "gaming"
-  ]
+  ],
+  "available_tags": {
+    "academic": ["academic.biomedical", "academic.citation", "academic.dataset", "academic.preprint", "academic.search"],
+    "agriculture": ["agriculture.fao"],
+    "business": ["business.company", "business.jobs", "business.people", "business.trade"],
+    "code": ["code.doc", "code.snippet"],
+    "energy": ["energy.electricity", "energy.production"],
+    "environment": ["environment.aqi"],
+    "film": ["film.torrent"],
+    "finance": ["finance.calendar", "finance.fundamental", "finance.macro", "finance.news", "finance.quote", "finance.screen"],
+    "gaming": ["gaming.esports", "gaming.store"],
+    "general": ["general.general"],
+    "health": ["health.drug", "health.stats", "health.trial"],
+    "ip": ["ip.global"],
+    "legal": ["legal.case", "legal.legislation", "legal.statute"],
+    "resource": ["resource.image"],
+    "security": ["security.intel", "security.noise", "security.scan", "security.vuln"],
+    "social_media": ["social_media.social_media"],
+    "travel": ["travel.flight", "travel.flight_status"]
+  }
 }

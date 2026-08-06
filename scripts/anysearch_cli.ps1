@@ -43,10 +43,20 @@ function Load-Env {
 Load-Env
 
 # BEGIN GENERATED:CONSTANTS
+$REST_ENDPOINT = "https://api.anysearch.com/v1/search"
 $AVAILABLE_DOMAINS = @(
     "general", "resource", "social_media", "finance", "academic", "legal",
     "health", "business", "security", "ip", "code", "energy",
     "environment", "agriculture", "travel", "film", "gaming"
+)
+$AVAILABLE_TAGS = @(
+    "academic.biomedical", "academic.citation", "academic.dataset", "academic.preprint", "academic.search", "agriculture.fao",
+    "business.company", "business.jobs", "business.people", "business.trade", "code.doc", "code.snippet",
+    "energy.electricity", "energy.production", "environment.aqi", "film.torrent", "finance.calendar", "finance.fundamental",
+    "finance.macro", "finance.news", "finance.quote", "finance.screen", "gaming.esports", "gaming.store",
+    "general.general", "health.drug", "health.stats", "health.trial", "ip.global", "legal.case",
+    "legal.legislation", "legal.statute", "resource.image", "security.intel", "security.noise", "security.scan",
+    "security.vuln", "social_media.social_media", "travel.flight", "travel.flight_status"
 )
 # END GENERATED:CONSTANTS
 
@@ -204,29 +214,107 @@ function Parse-SubDomainParams {
     }
 }
 
+function Invoke-RestSearch {
+    param(
+        [hashtable]$Arguments,
+        [string]$ApiKey
+    )
+
+    # REST /v1/search (single-query search). Success responses carry code==0;
+    # errors carry a non-zero code (sometimes with HTTP 4xx/5xx), a message,
+    # and optionally a data payload (e.g. auto-registered credentials on 402).
+    $payload = $Arguments | ConvertTo-Json -Depth 10 -Compress
+
+    $headers = @{ "Content-Type" = "application/json; charset=utf-8" }
+    if ($ApiKey) {
+        $headers["Authorization"] = "Bearer $ApiKey"
+    }
+
+    try {
+        $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
+        $webReq = [System.Net.HttpWebRequest]::Create($REST_ENDPOINT)
+        $webReq.Method = "POST"
+        # Do not auto-follow redirects: HttpWebRequest re-sends the Authorization
+        # header to the redirect target, which would leak the API key to another host.
+        $webReq.AllowAutoRedirect = $false
+        $webReq.ContentType = "application/json; charset=utf-8"
+        $webReq.Timeout = 30000
+        $webReq.Headers.Add("X-Anysearch-Client", $CLIENT_HEADER)
+        if ($ApiKey) {
+            $webReq.Headers.Add("Authorization", "Bearer $ApiKey")
+        }
+        $reqStream = $webReq.GetRequestStream()
+        $reqStream.Write($bodyBytes, 0, $bodyBytes.Length)
+        $reqStream.Close()
+        $webResp = $webReq.GetResponse()
+        $respStream = $webResp.GetResponseStream()
+        $respReader = New-Object System.IO.StreamReader($respStream, [System.Text.Encoding]::UTF8)
+        $rawJson = $respReader.ReadToEnd()
+        $respReader.Close()
+        $webResp.Close()
+        $resp = $rawJson | ConvertFrom-Json
+    } catch [System.Net.WebException] {
+        # HTTP error responses (4xx/5xx) surface as WebException; read the body.
+        $errResp = $_.Exception.Response
+        if ($errResp) {
+            try {
+                $errStream = $errResp.GetResponseStream()
+                $errReader = New-Object System.IO.StreamReader($errStream, [System.Text.Encoding]::UTF8)
+                $rawJson = $errReader.ReadToEnd()
+                $errReader.Close()
+                $errResp.Close()
+                $resp = $rawJson | ConvertFrom-Json
+            } catch {
+                Write-Error "API Error (HTTP error, no parseable body)"
+                exit 1
+            }
+        } else {
+            Write-Error "Connection Error: Unable to reach the API endpoint. ($($_.Exception.Message))"
+            exit 1
+        }
+    } catch {
+        $err = $_.Exception.Message
+        Write-Error "Connection Error: Unable to reach the API endpoint. ($err)"
+        exit 1
+    }
+
+    if ($resp.code -and $resp.code -ne 0) {
+        $errOut = "API Error: $($resp.message)"
+        if ($resp.request_id) { $errOut += " (request_id: $($resp.request_id))" }
+        Write-Error $errOut
+        if ($resp.data) {
+            Write-Error ("Response data: " + ($resp.data | ConvertTo-Json -Depth 5 -Compress))
+        }
+        exit 1
+    }
+
+    return ($resp | ConvertTo-Json -Depth 10)
+}
+
 function Invoke-Search {
     param([hashtable]$Opts)
 
     $arguments = @{ query = $Opts.Query }
 
-    if ($Opts.Domain) {
-        $arguments["domain"] = $Opts.Domain
-        if ($Opts.SubDomain) { $arguments["sub_domain"] = $Opts.SubDomain }
-        if ($Opts.SubDomainParams) {
-            $parsed = Parse-SubDomainParams $Opts.SubDomainParams
-            if (-not $parsed) {
-                Write-Error "Error: --sub_domain_params must be valid JSON or key=value pairs"
-                exit 1
-            }
-            $arguments["sub_domain_params"] = $parsed
+    if ($Opts.Tag) { $arguments["tag"] = $Opts.Tag }
+    if ($Opts.Domain) { $arguments["domain"] = $Opts.Domain }
+    if ($Opts.SubDomain) { $arguments["sub_domain"] = $Opts.SubDomain }
+    if ($Opts.Params) {
+        $parsed = Parse-SubDomainParams $Opts.Params
+        if (-not $parsed) {
+            Write-Error "Error: --params must be valid JSON or key=value pairs"
+            exit 1
         }
+        $arguments["params"] = $parsed
     }
-
+    if ($Opts.Zone) { $arguments["zone"] = $Opts.Zone }
+    if ($Opts.Language) { $arguments["language"] = $Opts.Language }
+    if ($Opts.Format) { $arguments["format"] = $Opts.Format }
     if ($Opts.MaxResults -ne $null) {
-        $arguments["max_results"] = [Math]::Min($Opts.MaxResults, 10)
+        $arguments["max_results"] = [Math]::Max(1, [Math]::Min($Opts.MaxResults, 20))
     }
 
-    $result = Call-Api -ToolName "search" -Arguments $arguments -ApiKey $Opts.ApiKey
+    $result = Invoke-RestSearch -Arguments $arguments -ApiKey $Opts.ApiKey
     Write-Output $result
 }
 
@@ -400,6 +488,7 @@ function Invoke-BatchSearch {
     }
 
     # Inject shared params into each query item (item's own fields take precedence)
+    $sharedTag = $Opts.SharedTag
     $sharedDomain = $Opts.SharedDomain
     $sharedSubDomain = $Opts.SharedSubDomain
     $sharedSdp = if ($Opts.SharedSdp) { Parse-SubDomainParams $Opts.SharedSdp } else { $null }
@@ -414,13 +503,16 @@ function Invoke-BatchSearch {
             $q = @{}
             $item.PSObject.Properties | ForEach-Object { $q[$_.Name] = $_.Value }
         }
+        if ($sharedTag -and -not $q["tag"]) { $q["tag"] = $sharedTag }
         if ($sharedDomain -and -not $q["domain"]) { $q["domain"] = $sharedDomain }
         if ($sharedSubDomain -and -not $q["sub_domain"]) { $q["sub_domain"] = $sharedSubDomain }
-        if ($sharedSdp -and -not $q["sub_domain_params"]) { $q["sub_domain_params"] = $sharedSdp }
-        if ($sharedMaxResults -ne $null -and $q["max_results"] -eq $null) { $q["max_results"] = [Math]::Min($sharedMaxResults, 10) }
-        # Parse KV string sub_domain_params inside query items
-        if ($q["sub_domain_params"] -is [string]) {
-            $q["sub_domain_params"] = Parse-SubDomainParams $q["sub_domain_params"]
+        if ($sharedSdp -and -not $q["params"] -and -not $q["sub_domain_params"]) { $q["params"] = $sharedSdp }
+        if ($sharedMaxResults -ne $null -and $q["max_results"] -eq $null) { $q["max_results"] = [Math]::Max(1, [Math]::Min($sharedMaxResults, 10)) }
+        # Parse KV string params / sub_domain_params inside query items
+        foreach ($key in @("params", "sub_domain_params")) {
+            if ($q[$key] -is [string]) {
+                $q[$key] = Parse-SubDomainParams $q[$key]
+            }
         }
         $finalQueries += $q
     }
@@ -439,6 +531,8 @@ function Render-Doc {
     $tpl = $tpl.Replace("{{LANG_CODEBLOCK}}", "powershell")
     $tpl = $tpl.Replace("{{LANG_INVOKE}}", "powershell -ExecutionPolicy Bypass -File scripts/anysearch_cli.ps1")
     $tpl = $tpl.Replace("{{DOMAINS_SPACE}}", ($c.available_domains -join " "))
+    $tags = ($c.available_tags.PSObject.Properties | ForEach-Object { "- " + $_.Name + ": " + ($_.Value -join ", ") }) -join [Environment]::NewLine
+    $tpl = $tpl.Replace("{{TAGS_SPACE}}", $tags)
     return $tpl
 }
 # END GENERATED:DOC_SPEC
@@ -474,9 +568,13 @@ switch ($command) {
 switch ($command) {
     "search" {
         $query = ""
+        $tag = ""
         $domain = ""
         $subDomain = ""
-        $subDomainParams = ""
+        $params = ""
+        $zone = ""
+        $language = ""
+        $format = ""
         $maxResults = $null
 
         $i = 0
@@ -490,13 +588,19 @@ switch ($command) {
 
         while ($i -lt $rest.Count) {
             switch ($rest[$i]) {
+                "--tag"    { $tag = $rest[$i+1]; $i += 2 }
+                "-t"       { $tag = $rest[$i+1]; $i += 2 }
                 "--domain" { $domain = $rest[$i+1]; $i += 2 }
                 "-d"       { $domain = $rest[$i+1]; $i += 2 }
                 "--sub_domain" { $subDomain = $rest[$i+1]; $i += 2 }
                 "-s"       { $subDomain = $rest[$i+1]; $i += 2 }
-                "--sub_domain_params" { $subDomainParams = $rest[$i+1]; $i += 2 }
-                "--sdp"    { $subDomainParams = $rest[$i+1]; $i += 2 }
-                "-p"       { $subDomainParams = $rest[$i+1]; $i += 2 }
+                "--params" { $params = $rest[$i+1]; $i += 2 }
+                "--sub_domain_params" { $params = $rest[$i+1]; $i += 2 }
+                "--sdp"    { $params = $rest[$i+1]; $i += 2 }
+                "-p"       { $params = $rest[$i+1]; $i += 2 }
+                "--zone"   { $zone = $rest[$i+1]; $i += 2 }
+                "--language" { $language = $rest[$i+1]; $i += 2 }
+                "--format" { $format = $rest[$i+1]; $i += 2 }
                 "--max_results" { $maxResults = [int]$rest[$i+1]; $i += 2 }
                 "-m"       { $maxResults = [int]$rest[$i+1]; $i += 2 }
                 "--api_key" { $apiKey = $rest[$i+1]; $i += 2 }
@@ -511,9 +615,13 @@ switch ($command) {
 
         Invoke-Search @{
             Query             = $query
+            Tag               = $tag
             Domain            = $domain
             SubDomain         = $subDomain
-            SubDomainParams   = $subDomainParams
+            Params            = $params
+            Zone              = $zone
+            Language          = $language
+            Format            = $format
             MaxResults        = $maxResults
             ApiKey            = $apiKey
         }
@@ -568,6 +676,7 @@ switch ($command) {
         $queryItems = [System.Collections.Generic.List[string]]::new()
         $queries = $null
         $positional = $null
+        $batchTag = ""
         $batchDomain = ""
         $batchSubDomain = ""
         $batchSdp = ""
@@ -579,10 +688,13 @@ switch ($command) {
                 "--queries" { $queries = $rest[$i+1]; $i += 2 }
                 "-q"        { $queries = $rest[$i+1]; $i += 2 }
                 "--query"   { $queryItems.Add($rest[$i+1]); $i += 2 }
+                "--tag"     { $batchTag = $rest[$i+1]; $i += 2 }
+                "-t"        { $batchTag = $rest[$i+1]; $i += 2 }
                 "--domain"  { $batchDomain = $rest[$i+1]; $i += 2 }
                 "-d"        { $batchDomain = $rest[$i+1]; $i += 2 }
                 "--sub_domain" { $batchSubDomain = $rest[$i+1]; $i += 2 }
                 "-s"        { $batchSubDomain = $rest[$i+1]; $i += 2 }
+                "--params"  { $batchSdp = $rest[$i+1]; $i += 2 }
                 "--sub_domain_params" { $batchSdp = $rest[$i+1]; $i += 2 }
                 "--sdp"     { $batchSdp = $rest[$i+1]; $i += 2 }
                 "-p"        { $batchSdp = $rest[$i+1]; $i += 2 }
@@ -602,6 +714,7 @@ switch ($command) {
         Invoke-BatchSearch @{
             Queries        = $queries
             QueryItems     = $queryItems
+            SharedTag      = $batchTag
             SharedDomain   = $batchDomain
             SharedSubDomain = $batchSubDomain
             SharedSdp      = $batchSdp
