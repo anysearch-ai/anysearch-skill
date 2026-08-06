@@ -19,29 +19,29 @@ Get started in 30 seconds: Register with just an email address. The AI agent wil
 If your agent platform supports a skill marketplace/store, search for **anysearch** and install from there. Otherwise, download and install manually:
 
 ```bash
-# Download a pinned release (recommended). Replace v3.0.1 with the latest tag
-# from https://github.com/anysearch-ai/anysearch-skill/releases
-curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.0.1.zip
-# or: wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.0.1.zip
+# Download a pinned release (recommended). Replace v3.1.0 with the latest tag
+# from https://github.com/v587d/anysearch-skill/releases
+curl -L -o anysearch-skill.zip https://github.com/v587d/anysearch-skill/archive/refs/tags/v3.1.0.zip
+# or: wget -O anysearch-skill.zip https://github.com/v587d/anysearch-skill/archive/refs/tags/v3.1.0.zip
 # (For the latest unreleased changes, use .../archive/refs/heads/main.zip instead.)
 
-# Unzip — creates a directory named anysearch-skill-<ref>, e.g. anysearch-skill-3.0.1
+# Unzip — creates a directory named anysearch-skill-<ref>, e.g. anysearch-skill-3.1.0
 unzip anysearch-skill.zip
 
 # Move it to your agent's skill directory, renaming it to "anysearch".
 # Adjust the source directory name to match the ref you downloaded.
-# Claude Code:     mv anysearch-skill-3.0.1 ~/.claude/skills/anysearch
-# OpenCode:        mv anysearch-skill-3.0.1 ~/.config/opencode/skills/anysearch
-# Cursor/Windsurf: mv anysearch-skill-3.0.1 <project>/.skills/anysearch
-# Generic:         mv anysearch-skill-3.0.1 <your_agent_skill_dir>/anysearch
-# Shared agents:   mv anysearch-skill-3.0.1 ~/.agents/skills/anysearch
+# Claude Code:     mv anysearch-skill-3.1.0 ~/.claude/skills/anysearch
+# OpenCode:        mv anysearch-skill-3.1.0 ~/.config/opencode/skills/anysearch
+# Cursor/Windsurf: mv anysearch-skill-3.1.0 <project>/.skills/anysearch
+# Generic:         mv anysearch-skill-3.1.0 <your_agent_skill_dir>/anysearch
+# Shared agents:   mv anysearch-skill-3.1.0 ~/.agents/skills/anysearch
 ```
 
 `~/.agents/skills/` is a useful shared install location when multiple AI tools read from the same skill directory, including Codex, Cursor, and OpenClaw personal agent skills.
 
 ### For Humans
 
-1. Download the latest release zip: https://github.com/anysearch-ai/anysearch-skill/releases
+1. Download the latest release zip: https://github.com/v587d/anysearch-skill/releases
 2. Unzip to your agent's skill directory
 3. Configure API key (see below)
 4. Run the entry test to verify installation
@@ -222,12 +222,20 @@ After `runtime.conf` exists, agents should use the stored `Command` directly for
 
 ```bash
 python3 <skill_dir>/scripts/anysearch_cli.py search "query" --max_results 5
+python3 <skill_dir>/scripts/anysearch_cli.py search "query" --zone cn --language zh-CN --max_results 5
+python3 <skill_dir>/scripts/anysearch_cli.py search "AAPL" --tag finance.quote --params type=stock,symbol=AAPL,cn_code=
+python3 <skill_dir>/scripts/anysearch_cli.py search "react hooks" --tag code.doc --params library=react
 python3 <skill_dir>/scripts/anysearch_cli.py batch_search --queries '[{"query":"q1","max_results":5},{"query":"q2","max_results":5}]'
+python3 <skill_dir>/scripts/anysearch_cli.py batch_search --query AAPL --query GOOG --tag finance.quote --params type=stock,symbol=,cn_code=
 python3 <skill_dir>/scripts/anysearch_cli.py extract "https://example.com/page"
 python3 <skill_dir>/scripts/anysearch_cli.py extract --url "https://example.com/page"
 ```
 
-`extract` output is already Markdown. Do not pass `--format markdown`, `--format json`, or `--markdown`; the extract command only accepts the URL positional argument or `--url`/`-u`. If a subcommand argument is unclear or fails, run `<command> <subcommand> --help` for that subcommand rather than the full `doc` command.
+Notes:
+- `search` uses the REST endpoint `https://api.anysearch.com/v1/search`; `batch_search` / `extract` / `get_sub_domains` use the MCP JSON-RPC endpoint `https://api.anysearch.com/mcp`.
+- `search --max_results` accepts 1–20 (default 10); `batch_search --max_results` is capped at 10.
+- `--params` (aliases `--sub_domain_params`, `--sdp`, `-p`) takes key=value pairs or JSON; `--tag` is the `{domain}.{sub_domain}` key (e.g. `finance.quote`) obtained from `get_sub_domains`.
+- `extract` output is already Markdown. Do not pass `--format markdown`, `--format json`, or `--markdown`; the extract command only accepts the URL positional argument or `--url`/`-u`. (`search --format markdown` is valid.) If a subcommand argument is unclear or fails, run `<command> <subcommand> --help` for that subcommand rather than the full `doc` command.
 
 ### Step 4 (optional): Test a real search
 
@@ -241,7 +249,7 @@ If your system does not provide `python`, use:
 python3 <skill_dir>/scripts/anysearch_cli.py search "hello world" --max_results 1
 ```
 
-A successful JSON response confirms the API connection is working.
+A successful JSON response (`"code": 0`) confirms the API connection is working.
 
 ## File Structure
 
@@ -251,9 +259,14 @@ anysearch-skill/              # renamed to "anysearch" on install (see above)
 ├── .env                      # Your API key (gitignored; create from .env.example)
 ├── runtime.conf.example      # Runtime configuration template
 ├── runtime.conf              # Detected runtime preferences (gitignored; created at install)
-├── SKILL.md                  # Skill definition for AI agents
+├── SKILL.md                  # Skill definition for AI agents (slim; deep dives in references/)
 ├── README.md                 # This file
 ├── SECURITY.md               # Security policy / vulnerability reporting
+├── references/               # Detailed docs loaded on-demand by the agent
+│   ├── api.md                # Full command reference, response formats, scenarios, tag catalog
+│   ├── troubleshooting.md    # Error codes, rate limits/quota, common CLI issues
+│   ├── platform-detection.md # Runtime detection, runtime.conf, CLI invocation
+│   └── api-key-management.md # Key priority, registration flow, persisting keys
 └── scripts/
     ├── anysearch_cli.py      # Python CLI
     ├── anysearch_cli.js      # Node.js CLI
@@ -261,6 +274,6 @@ anysearch-skill/              # renamed to "anysearch" on install (see above)
     ├── anysearch_cli.sh      # Bash CLI
     ├── generate.py           # Regenerates the shared blocks in the 4 CLIs
     └── shared/               # Single source of truth read by the CLIs
-        ├── constants.json    # Domain list + endpoint
+        ├── constants.json    # Domain list, tag list, endpoints
         └── doc_spec.md       # AI-facing interface spec (rendered by `doc`)
 ```

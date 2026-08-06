@@ -19,29 +19,29 @@
 如果你的智能体平台支持 skill 市场/商店，直接搜索 **anysearch** 并从中安装即可。否则手动下载安装：
 
 ```bash
-# 下载指定版本发布包（推荐）。请将 v3.0.1 替换为最新 tag
-# 最新 tag 见 https://github.com/anysearch-ai/anysearch-skill/releases
-curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.0.1.zip
-# 或使用：wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.0.1.zip
+# 下载指定版本发布包（推荐）。请将 v3.1.0 替换为最新 tag
+# 最新 tag 见 https://github.com/v587d/anysearch-skill/releases
+curl -L -o anysearch-skill.zip https://github.com/v587d/anysearch-skill/archive/refs/tags/v3.1.0.zip
+# 或使用：wget -O anysearch-skill.zip https://github.com/v587d/anysearch-skill/archive/refs/tags/v3.1.0.zip
 # （如需获取尚未发布的最新改动，请改用 .../archive/refs/heads/main.zip。）
 
-# 解压 —— 会生成一个名为 anysearch-skill-<ref> 的目录，例如 anysearch-skill-3.0.1
+# 解压 —— 会生成一个名为 anysearch-skill-<ref> 的目录，例如 anysearch-skill-3.1.0
 unzip anysearch-skill.zip
 
 # 将其移动到智能体的 skill 目录，并重命名为 "anysearch"。
 # 请根据你下载的 ref 调整源目录名。
-# Claude Code:     mv anysearch-skill-3.0.1 ~/.claude/skills/anysearch
-# OpenCode:        mv anysearch-skill-3.0.1 ~/.config/opencode/skills/anysearch
-# Cursor/Windsurf: mv anysearch-skill-3.0.1 <project>/.skills/anysearch
-# 通用:            mv anysearch-skill-3.0.1 <your_agent_skill_dir>/anysearch
-# 共享智能体:      mv anysearch-skill-3.0.1 ~/.agents/skills/anysearch
+# Claude Code:     mv anysearch-skill-3.1.0 ~/.claude/skills/anysearch
+# OpenCode:        mv anysearch-skill-3.1.0 ~/.config/opencode/skills/anysearch
+# Cursor/Windsurf: mv anysearch-skill-3.1.0 <project>/.skills/anysearch
+# 通用:            mv anysearch-skill-3.1.0 <your_agent_skill_dir>/anysearch
+# 共享智能体:      mv anysearch-skill-3.1.0 ~/.agents/skills/anysearch
 ```
 
 当多个 AI 工具从同一 skill 目录读取时，`~/.agents/skills/` 是一个很实用的共享安装位置，包括 Codex、Cursor 以及 OpenClaw 个人智能体 skill。
 
 ### 面向人类用户
 
-1. 下载最新发布版 zip：https://github.com/anysearch-ai/anysearch-skill/releases
+1. 下载最新发布版 zip：https://github.com/v587d/anysearch-skill/releases
 2. 解压到智能体的 skill 目录
 3. 配置 API key（见下文）
 4. 运行入口测试以验证安装
@@ -222,12 +222,20 @@ echo "Command: bash <skill_dir>/scripts/anysearch_cli.sh" >> <skill_dir>/runtime
 
 ```bash
 python3 <skill_dir>/scripts/anysearch_cli.py search "query" --max_results 5
+python3 <skill_dir>/scripts/anysearch_cli.py search "query" --zone cn --language zh-CN --max_results 5
+python3 <skill_dir>/scripts/anysearch_cli.py search "AAPL" --tag finance.quote --params type=stock,symbol=AAPL,cn_code=
+python3 <skill_dir>/scripts/anysearch_cli.py search "react hooks" --tag code.doc --params library=react
 python3 <skill_dir>/scripts/anysearch_cli.py batch_search --queries '[{"query":"q1","max_results":5},{"query":"q2","max_results":5}]'
+python3 <skill_dir>/scripts/anysearch_cli.py batch_search --query AAPL --query GOOG --tag finance.quote --params type=stock,symbol=,cn_code=
 python3 <skill_dir>/scripts/anysearch_cli.py extract "https://example.com/page"
 python3 <skill_dir>/scripts/anysearch_cli.py extract --url "https://example.com/page"
 ```
 
-`extract` 的输出本身就是 Markdown。不要传入 `--format markdown`、`--format json` 或 `--markdown`；extract 命令只接受 URL 位置参数或 `--url`/`-u`。若某个子命令参数不清楚或执行失败，请运行 `<command> <subcommand> --help` 查看该子命令的帮助，而不是运行完整的 `doc` 命令。
+说明：
+- `search` 走 REST 接口 `https://api.anysearch.com/v1/search`；`batch_search` / `extract` / `get_sub_domains` 走 MCP JSON-RPC 接口 `https://api.anysearch.com/mcp`。
+- `search --max_results` 支持 1–20（默认 10）；`batch_search --max_results` 上限为 10。
+- `--params`（别名 `--sub_domain_params`、`--sdp`、`-p`）接受 key=value 对或 JSON；`--tag` 是 `{domain}.{sub_domain}` 形式的完整键（如 `finance.quote`），通过 `get_sub_domains` 获取。
+- `extract` 的输出本身就是 Markdown。不要传入 `--format markdown`、`--format json` 或 `--markdown`；extract 命令只接受 URL 位置参数或 `--url`/`-u`。（`search --format markdown` 是合法的。）若某个子命令参数不清楚或执行失败，请运行 `<command> <subcommand> --help` 查看该子命令的帮助，而不是运行完整的 `doc` 命令。
 
 ### 第 4 步（可选）：测试一次真实搜索
 
@@ -241,7 +249,7 @@ python <skill_dir>/scripts/anysearch_cli.py search "hello world" --max_results 1
 python3 <skill_dir>/scripts/anysearch_cli.py search "hello world" --max_results 1
 ```
 
-成功的 JSON 响应即确认 API 连接正常。
+成功的 JSON 响应（`"code": 0`）即确认 API 连接正常。
 
 ## 文件结构
 
@@ -251,9 +259,14 @@ anysearch-skill/              # 安装时重命名为 "anysearch"（见上文）
 ├── .env                      # 你的 API key（已 gitignore；从 .env.example 创建）
 ├── runtime.conf.example      # 运行时配置模板
 ├── runtime.conf              # 检测到的运行时偏好（已 gitignore；安装时创建）
-├── SKILL.md                  # 面向 AI 智能体的 skill 定义
+├── SKILL.md                  # 面向 AI 智能体的 skill 定义（精简版；详细文档在 references/）
 ├── README.md                 # 英文说明文件
 ├── SECURITY.md               # 安全策略 / 漏洞报告
+├── references/               # 按需加载的详细文档
+│   ├── api.md                # 完整命令参考、响应格式、场景示例、tag 目录
+│   ├── troubleshooting.md    # 错误码、限流/配额、常见 CLI 问题
+│   ├── platform-detection.md # 运行时检测、runtime.conf、CLI 调用方式
+│   └── api-key-management.md # key 优先级、注册流程、持久化
 └── scripts/
     ├── anysearch_cli.py      # Python CLI
     ├── anysearch_cli.js      # Node.js CLI
@@ -261,6 +274,6 @@ anysearch-skill/              # 安装时重命名为 "anysearch"（见上文）
     ├── anysearch_cli.sh      # Bash CLI
     ├── generate.py           # 重新生成 4 个 CLI 中的共享代码块
     └── shared/               # CLI 读取的唯一数据源
-        ├── constants.json    # 领域列表 + 端点
+        ├── constants.json    # 领域列表、tag 列表、端点
         └── doc_spec.md       # 面向 AI 的接口规范（由 `doc` 渲染）
 ```
