@@ -20,9 +20,9 @@ If your agent platform supports a skill marketplace/store, search for **anysearc
 
 ```bash
 # Download a pinned release (recommended). Replace v3.1.0 with the latest tag
-# from https://github.com/v587d/anysearch-skill/releases
-curl -L -o anysearch-skill.zip https://github.com/v587d/anysearch-skill/archive/refs/tags/v3.1.0.zip
-# or: wget -O anysearch-skill.zip https://github.com/v587d/anysearch-skill/archive/refs/tags/v3.1.0.zip
+# from https://github.com/anysearch-ai/anysearch-skill/releases
+curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.0.zip
+# or: wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.0.zip
 # (For the latest unreleased changes, use .../archive/refs/heads/main.zip instead.)
 
 # Unzip — creates a directory named anysearch-skill-<ref>, e.g. anysearch-skill-3.1.0
@@ -41,7 +41,7 @@ unzip anysearch-skill.zip
 
 ### For Humans
 
-1. Download the latest release zip: https://github.com/v587d/anysearch-skill/releases
+1. Download the latest release zip: https://github.com/anysearch-ai/anysearch-skill/releases
 2. Unzip to your agent's skill directory
 3. Configure API key (see below)
 4. Run the entry test to verify installation

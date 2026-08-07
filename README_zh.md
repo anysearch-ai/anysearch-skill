@@ -20,9 +20,9 @@
 
 ```bash
 # 下载指定版本发布包（推荐）。请将 v3.1.0 替换为最新 tag
-# 最新 tag 见 https://github.com/v587d/anysearch-skill/releases
-curl -L -o anysearch-skill.zip https://github.com/v587d/anysearch-skill/archive/refs/tags/v3.1.0.zip
-# 或使用：wget -O anysearch-skill.zip https://github.com/v587d/anysearch-skill/archive/refs/tags/v3.1.0.zip
+# 最新 tag 见 https://github.com/anysearch-ai/anysearch-skill/releases
+curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.0.zip
+# 或使用：wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.0.zip
 # （如需获取尚未发布的最新改动，请改用 .../archive/refs/heads/main.zip。）
 
 # 解压 —— 会生成一个名为 anysearch-skill-<ref> 的目录，例如 anysearch-skill-3.1.0
@@ -41,7 +41,7 @@ unzip anysearch-skill.zip
 
 ### 面向人类用户
 
-1. 下载最新发布版 zip：https://github.com/v587d/anysearch-skill/releases
+1. 下载最新发布版 zip：https://github.com/anysearch-ai/anysearch-skill/releases
 2. 解压到智能体的 skill 目录
 3. 配置 API key（见下文）
 4. 运行入口测试以验证安装
