@@ -25,6 +25,9 @@ jobs:
       - name: Ensure jq is available (bash CLI dependency)
         run: jq --version || (sudo apt-get update && sudo apt-get install -y jq)
 
+      - name: Verify all available CLI runtimes against the local HTTP contract stub
+        run: python scripts/test_cli.py
+
       - name: doc output must not leak unreplaced {{...}} template placeholders
         run: |
           fail=0

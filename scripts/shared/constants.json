@@ -1,5 +1,5 @@
 {
-  "endpoint": "https://api.anysearch.com/mcp",
+  "api_base_url": "https://api.anysearch.com",
   "available_domains": [
     "general", "resource", "social_media", "finance", "academic",
     "legal", "health", "business", "security", "ip", "code",
