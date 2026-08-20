@@ -52,7 +52,7 @@ API key **是可选项，但强烈建议配置**。即使没有 key，你依然�
 
 ### 注册获取 API Key（推荐）
 
-智能体可以在**一次调用**中完成用户注册并获取 API key —— 无需验证码，无需手动注册。向用户索取一个**真实邮箱地址**：它将作为账户用户名，随机生成的密码会发送到该邮箱。
+智能体可以在**一次调用**中完成用户注册并获取 API key —— 无需验证码，无需手动注册。向用户索取一个**真实邮箱地址**：它将作为账户用户名。
 
 ```bash
 curl -s -X POST "https://api.anysearch.com/v1/auth/email/register" \
@@ -87,8 +87,7 @@ curl -s -X POST "https://api.anysearch.com/v1/auth/email/register" \
 成功后智能体**必须**：
 
 1. 将 `data.api_key.key` 写入 `.env`，格式为 `ANYSEARCH_API_KEY=<key>` —— 它只显示一次（之后也可从控制台重新获取）。
-2. 告知用户其用户名（= 邮箱）、`login_url`，以及**随机密码已发送到该邮箱**。
-3. 向用户转达以下说明：*验证邮件已发送至你的收件箱。若几分钟内未收到，请检查垃圾邮件文件夹。你可能需要将其标记为"非垃圾邮件"，以确保后续邮件正常送达。*
+2. 告知用户其用户名（= 邮箱）和 `login_url`。
 
 错误处理（出错时 `code` 始终为 `-1`；根据 `message` 字符串分支处理）：
 
@@ -100,7 +99,7 @@ curl -s -X POST "https://api.anysearch.com/v1/auth/email/register" \
 | 以 `Key creation failed.` 开头 | 账户已创建但 key 创建失败 —— 从 message 中提取邮箱和 URL（`"Key creation failed. Your account <email> was created; sign in at <url>."`），告知用户在该地址登录并手动创建 key |
 | `Internal server error.`          | 稍后重试，或回退到匿名访问                                                               |
 
-> 该邮箱**必须真实且可接收邮件** —— 密码会发送到该邮箱。此流程中**没有验证码**；智能体只会索取邮箱。注册与匿名使用是互斥的；一旦用户选定其一，请勿在流程中途切换。
+> 该邮箱**必须真实且可接收邮件**。注册与匿名使用是互斥的；一旦用户选定其一，请勿在流程中途切换。
 
 ### 如何配置
 

@@ -52,7 +52,7 @@ An API key is **optional but strongly recommended**. Without a key, you can stil
 
 ### Register for an API Key (Recommended)
 
-The agent can register the user and obtain an API key in a **single call** — no verification code, no manual signup. Ask the user for a **real email address**: it becomes the account username, and a randomly generated password is emailed to it.
+The agent can register the user and obtain an API key in a **single call** — no verification code, no manual signup. Ask the user for a **real email address**: it becomes the account username.
 
 ```bash
 curl -s -X POST "https://api.anysearch.com/v1/auth/email/register" \
@@ -87,8 +87,7 @@ Success response (`code: 0`) returns the account info and a one-time plaintext A
 On success the agent MUST:
 
 1. Write `data.api_key.key` to `.env` as `ANYSEARCH_API_KEY=<key>` — it is shown only once (it can also be retrieved later from the dashboard).
-2. Tell the user their username (= email), the `login_url`, and that a **random password has been emailed to that address**.
-3. Relay this note to the user: *A verification email has been sent to your inbox. If you don't see it within a few minutes, please check your spam or junk folder. You may need to mark it as "Not Spam" to ensure future emails arrive correctly.*
+2. Tell the user their username (= email) and the `login_url`.
 
 Error handling (always `code: -1` on error; branch on the `message` string):
 
@@ -100,7 +99,7 @@ Error handling (always `code: -1` on error; branch on the `message` string):
 | starts with `Key creation failed.` | account created but key failed — extract the email and URL from the message (`"Key creation failed. Your account <email> was created; sign in at <url>."`) and tell the user to sign in there to create a key manually |
 | `Internal server error.`          | retry later or fall back to anonymous                                                               |
 
-> The email **must be real and reachable** — the password is delivered there. There is **no verification code** in this flow; the agent only ever asks for an email. Registration and anonymous use are mutually exclusive; once the user picks one, don't switch mid-flow.
+> The email **must be real and reachable**. Registration and anonymous use are mutually exclusive; once the user picks one, don't switch mid-flow.
 
 ### How to configure
 
