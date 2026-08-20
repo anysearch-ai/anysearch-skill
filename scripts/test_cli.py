@@ -116,7 +116,6 @@ class Handler(BaseHTTPRequestHandler):
                         "url": body.get("url", ""),
                         "title": "Example",
                         "content": "page body",
-                        "content_trust": "external_untrusted",
                     },
                 },
             )
@@ -237,7 +236,7 @@ def test_runtime(name, command, base_url):
     require(request["path"] == "/v1/search", f"{name}: wrong search path")
     require(request["body"].get("tag") == "finance.quote", f"{name}: sub_domain was not translated")
     require(request["body"].get("params") == {"symbol": "AAPL"}, f"{name}: params were not translated")
-    require(request["body"].get("max_results") == 20, f"{name}: REST max_results was clamped incorrectly")
+    require(request["body"].get("max_results") == 10, f"{name}: REST max_results was not clamped to 10")
     require(not ({"domain", "sub_domain", "sub_domain_params"} & request["body"].keys()), f"{name}: legacy fields leaked to REST")
     require(request["client"] == "skill/3.0.1", f"{name}: client header missing")
 
@@ -259,13 +258,13 @@ def test_runtime(name, command, base_url):
     STATE.reset()
     batch = json.dumps(
         [
-            {"query": "slow", "domain": "finance", "sub_domain": "finance.quote", "sub_domain_params": "symbol=SLOW"},
+            {"query": "slow", "domain": "finance", "sub_domain": "finance.quote", "sub_domain_params": "symbol=SLOW", "max_results": 20},
             {"query": "drop"},
             {"query": "fail"},
             {"query": "fast"},
         ]
     )
-    result = run(command, ["batch_search", "--queries", batch], base_url)
+    result = run(command, ["batch_search", "--queries", batch, "--max_results", "20"], base_url)
     require(result.returncode == 0, f"{name}: partial batch should exit zero", result)
     headings = [result.stdout.index(f"## Query {index}: {query}") for index, query in enumerate(("slow", "drop", "fail", "fast"), 1)]
     require(headings == sorted(headings), f"{name}: batch output order changed", result)
@@ -273,6 +272,7 @@ def test_runtime(name, command, base_url):
     require(STATE.max_active_searches > 1, f"{name}: batch requests were not concurrent")
     batch_requests = [item for item in STATE.requests if item["path"] == "/v1/search"]
     require(len(batch_requests) == 4, f"{name}: batch did not fan out to four REST requests")
+    require(all(item["body"].get("max_results") == 10 for item in batch_requests), f"{name}: batch max_results was not clamped to 10")
     slow = next(item for item in batch_requests if item["body"].get("query") == "slow")
     require(slow["body"].get("tag") == "finance.quote" and slow["body"].get("params") == {"symbol": "SLOW"}, f"{name}: batch legacy translation failed")
     require(all(item["path"] != "/mcp" for item in STATE.requests), f"{name}: MCP endpoint was called")

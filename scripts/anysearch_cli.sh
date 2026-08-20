@@ -296,7 +296,7 @@ _cmd_search() {
   [[ -n "$language" ]] && args=$(printf '%s' "$args" | jq --arg l "$language" '. + {"language":$l}')
 
   if [[ -n "$max_results" ]]; then
-    (( max_results > 20 )) && max_results=20
+    (( max_results > 10 )) && max_results=10
     (( max_results < 1 )) && max_results=1
     args=$(printf '%s' "$args" | jq --argjson m "$max_results" '. + {"max_results":$m}')
   fi
@@ -486,7 +486,7 @@ _cmd_batch_search() {
         (if ($sd != "" and (.domain == null or .domain == "")) then .domain = $sd else . end) |
         (if ($ss != "" and (.sub_domain == null or .sub_domain == "")) then .sub_domain = $ss else . end) |
         (if ($sp != null and (.params == null) and (.sub_domain_params == null)) then .params = $sp else . end) |
-        (if ($sm != null and (.max_results == null)) then .max_results = ([([$sm, 20] | min), 1] | max) else . end)
+        (if ($sm != null and (.max_results == null)) then .max_results = ([([$sm, 10] | min), 1] | max) else . end)
       ]')
   fi
 
@@ -513,7 +513,7 @@ _cmd_batch_search() {
         {query:(.query // ""), __local_error:"query is required"}
       else
         {query, tag:(.tag // .sub_domain), params:(.params // .sub_domain_params), zone, language,
-         max_results:(if .max_results == null then null else ([([(.max_results | tonumber), 20] | min), 1] | max) end)} |
+         max_results:(if .max_results == null then null else ([([(.max_results | tonumber), 10] | min), 1] | max) end)} |
         with_entries(select(.value != null and .value != ""))
       end
     ]')

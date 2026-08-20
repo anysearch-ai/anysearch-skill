@@ -207,7 +207,7 @@ def _normalize_search_item(item: dict) -> dict:
         if item.get(key):
             normalized[key] = item[key]
     if item.get("max_results") is not None:
-        normalized["max_results"] = max(1, min(int(item["max_results"]), 20))
+        normalized["max_results"] = max(1, min(int(item["max_results"]), 10))
     return normalized
 
 
@@ -284,7 +284,7 @@ def cmd_search(args):
         arguments["language"] = args.language
 
     if args.max_results is not None:
-        arguments["max_results"] = max(1, min(args.max_results, 20))
+        arguments["max_results"] = max(1, min(args.max_results, 10))
 
     print(_format_search_response(_call_or_exit("POST", "/v1/search", args.api_key, payload=arguments)), end="")
 
@@ -453,7 +453,7 @@ def cmd_batch_search(args):
         if shared_sdp and not item.get("params") and not item.get("sub_domain_params"):
             item["params"] = shared_sdp
         if shared_max_results is not None and item.get("max_results") is None:
-            item["max_results"] = max(1, min(shared_max_results, 20))
+            item["max_results"] = max(1, min(shared_max_results, 10))
 
     work = queue.Queue()
     results = [None] * len(queries)
@@ -581,7 +581,7 @@ def build_parser() -> argparse.ArgumentParser:
     search_p.add_argument(
         "--max_results", "-m",
         type=int,
-        help="Maximum number of results to return (1-20, default 10).",
+        help="Maximum number of results to return (1-10, default 10).",
     )
     search_p.set_defaults(func=cmd_search)
 
@@ -700,7 +700,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--max_results", "-m",
         dest="batch_max_results",
         type=int,
-        help="Shared max results (1-20) injected into all query items (item's own max_results takes precedence).",
+        help="Shared max results (1-10) injected into all query items (item's own max_results takes precedence).",
     )
     batch_p.set_defaults(func=cmd_batch_search)
 

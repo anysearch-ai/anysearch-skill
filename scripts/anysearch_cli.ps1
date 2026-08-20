@@ -203,7 +203,7 @@ function Normalize-SearchItem {
     if ($params -is [string]) { $params = Parse-SubDomainParams $params }
     if ($params) { $normalized["params"] = $params }
     foreach ($key in @("zone", "language")) { if ($Item[$key]) { $normalized[$key] = $Item[$key] } }
-    if ($null -ne $Item["max_results"]) { $normalized["max_results"] = [Math]::Max(1, [Math]::Min([int]$Item["max_results"], 20)) }
+    if ($null -ne $Item["max_results"]) { $normalized["max_results"] = [Math]::Max(1, [Math]::Min([int]$Item["max_results"], 10)) }
     return $normalized
 }
 
@@ -306,7 +306,7 @@ function Invoke-Search {
     if ($Opts.Language) { $arguments["language"] = $Opts.Language }
 
     if ($Opts.MaxResults -ne $null) {
-        $arguments["max_results"] = [Math]::Max(1, [Math]::Min($Opts.MaxResults, 20))
+        $arguments["max_results"] = [Math]::Max(1, [Math]::Min($Opts.MaxResults, 10))
     }
 
     $body = Get-RestBodyOrExit (Invoke-RestRequest -Method "POST" -Path "/v1/search" -ApiKey $Opts.ApiKey -Payload $arguments)
@@ -502,7 +502,7 @@ function Invoke-BatchSearch {
         if ($sharedDomain -and -not $q["domain"]) { $q["domain"] = $sharedDomain }
         if ($sharedSubDomain -and -not $q["sub_domain"]) { $q["sub_domain"] = $sharedSubDomain }
         if ($sharedSdp -and -not $q["params"] -and -not $q["sub_domain_params"]) { $q["params"] = $sharedSdp }
-        if ($sharedMaxResults -ne $null -and $q["max_results"] -eq $null) { $q["max_results"] = [Math]::Max(1, [Math]::Min($sharedMaxResults, 20)) }
+        if ($sharedMaxResults -ne $null -and $q["max_results"] -eq $null) { $q["max_results"] = [Math]::Max(1, [Math]::Min($sharedMaxResults, 10)) }
         $finalQueries += $q
     }
 

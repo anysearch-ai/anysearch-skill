@@ -183,7 +183,7 @@ function normalizeSearchItem(item) {
   if (typeof params === "string") params = parseSubDomainParams(params);
   if (params) normalized.params = params;
   for (const key of ["zone", "language"]) if (item[key]) normalized[key] = item[key];
-  if (item.max_results != null) normalized.max_results = Math.max(1, Math.min(Number(item.max_results), 20));
+  if (item.max_results != null) normalized.max_results = Math.max(1, Math.min(Number(item.max_results), 10));
   return normalized;
 }
 
@@ -259,7 +259,7 @@ async function cmdSearch(opts) {
   if (opts.zone) args.zone = opts.zone;
   if (opts.language) args.language = opts.language;
 
-  if (opts.maxResults !== undefined) args.max_results = Math.max(1, Math.min(opts.maxResults, 20));
+  if (opts.maxResults !== undefined) args.max_results = Math.max(1, Math.min(opts.maxResults, 10));
 
   const result = await callOrExit("POST", "/v1/search", opts.apiKey, args);
   process.stdout.write(formatSearchResponse(result));
@@ -409,7 +409,7 @@ async function cmdBatchSearch(opts) {
     if (sharedDomain && !item.domain) item.domain = sharedDomain;
     if (sharedSubDomain && !item.sub_domain) item.sub_domain = sharedSubDomain;
     if (sharedSdp && !item.params && !item.sub_domain_params) item.params = sharedSdp;
-    if (sharedMaxResults !== undefined && item.max_results == null) item.max_results = Math.max(1, Math.min(sharedMaxResults, 20));
+    if (sharedMaxResults !== undefined && item.max_results == null) item.max_results = Math.max(1, Math.min(sharedMaxResults, 10));
   }
 
   const results = await Promise.all(queries.map(async (item) => {

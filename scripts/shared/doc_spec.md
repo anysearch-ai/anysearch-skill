@@ -25,7 +25,7 @@ Two modes: general (omit --tag/--domain) and vertical (`--tag`, or compatibility
 | --params, --sdp, --sub_domain_params, -p | string | conditional | Extra params per tag schema. Accepts **key=value pairs** (e.g. `type=stock,symbol=AAPL,cn_code=`) or JSON. ALL params marked (required) MUST be included, use empty value for inapplicable ones (e.g. `cn_code=`). Omit entirely if no params are listed. |
 | --zone | string | no | `cn` or `intl` region preference |
 | --language | string | no | Preferred result language, e.g. `zh-CN` or `en` |
-| --max_results, -m | int | no | 1-20, default 10 |
+| --max_results, -m | int | no | 1-10, default 10 |
 
 ### 2. get_sub_domains — Query vertical domain directory
 MUST be called before vertical search to discover available sub_domains and their required parameters.
@@ -50,7 +50,7 @@ The CLI sends one independent `POST /v1/search` per item with at most five in fl
 | --domain, -d | string | no | Shared domain injected into all query items (per-item domain overrides) |
 | --sub_domain, -s | string | no | Shared sub_domain injected into all query items (per-item sub_domain overrides) |
 | --params, --sdp, --sub_domain_params, -p | string | no | Shared params (key=value or JSON) injected into all query items |
-| --max_results, -m | int | no | Shared max results (1-20) injected into all query items (item's own max_results takes precedence) |
+| --max_results, -m | int | no | Shared max results (1-10) injected into all query items (item's own max_results takes precedence) |
 
 Each query object supports: query (required), tag, params, zone, language, max_results, plus compatibility aliases domain, sub_domain, sub_domain_params.
 Shared --domain/--sub_domain/--sdp/--max_results are injected into items that lack their own values; per-item fields always take precedence.
