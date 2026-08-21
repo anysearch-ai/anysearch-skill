@@ -19,22 +19,22 @@
 如果你的智能体平台支持 skill 市场/商店，直接搜索 **anysearch** 并从中安装即可。否则手动下载安装：
 
 ```bash
-# 下载指定版本发布包（推荐）。请将 v3.0.1 替换为最新 tag
+# 下载指定版本发布包（推荐）。请将 v3.1.0 替换为最新 tag
 # 最新 tag 见 https://github.com/anysearch-ai/anysearch-skill/releases
-curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.0.1.zip
-# 或使用：wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.0.1.zip
+curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.0.zip
+# 或使用：wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.0.zip
 # （如需获取尚未发布的最新改动，请改用 .../archive/refs/heads/main.zip。）
 
-# 解压 —— 会生成一个名为 anysearch-skill-<ref> 的目录，例如 anysearch-skill-3.0.1
+# 解压 —— 会生成一个名为 anysearch-skill-<ref> 的目录，例如 anysearch-skill-3.1.0
 unzip anysearch-skill.zip
 
 # 将其移动到智能体的 skill 目录，并重命名为 "anysearch"。
 # 请根据你下载的 ref 调整源目录名。
-# Claude Code:     mv anysearch-skill-3.0.1 ~/.claude/skills/anysearch
-# OpenCode:        mv anysearch-skill-3.0.1 ~/.config/opencode/skills/anysearch
-# Cursor/Windsurf: mv anysearch-skill-3.0.1 <project>/.skills/anysearch
-# 通用:            mv anysearch-skill-3.0.1 <your_agent_skill_dir>/anysearch
-# 共享智能体:      mv anysearch-skill-3.0.1 ~/.agents/skills/anysearch
+# Claude Code:     mv anysearch-skill-3.1.0 ~/.claude/skills/anysearch
+# OpenCode:        mv anysearch-skill-3.1.0 ~/.config/opencode/skills/anysearch
+# Cursor/Windsurf: mv anysearch-skill-3.1.0 <project>/.skills/anysearch
+# 通用:            mv anysearch-skill-3.1.0 <your_agent_skill_dir>/anysearch
+# 共享智能体:      mv anysearch-skill-3.1.0 ~/.agents/skills/anysearch
 ```
 
 当多个 AI 工具从同一 skill 目录读取时，`~/.agents/skills/` 是一个很实用的共享安装位置，包括 Codex、Cursor 以及 OpenClaw 个人智能体 skill。
