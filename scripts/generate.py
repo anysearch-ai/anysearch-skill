@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Code generator for AnySearch CLI scripts.
 
-Reads constants.json from scripts/shared/ and injects the domain list
+Reads constants.json from scripts/shared/ and injects the API base URL, domain list,
 and doc command implementation into each CLI script. Eliminates duplication
 across all 4 language implementations.
 
@@ -38,10 +38,11 @@ def load_constants():
 
 def render_constants(ext, constants):
     """Render constants block in the target language syntax."""
+    base_url = constants["api_base_url"]
     domains = constants["available_domains"]
 
     if ext == ".py":
-        lines = []
+        lines = [f'API_BASE_URL = os.environ.get("ANYSEARCH_API_BASE_URL", "{base_url}").rstrip("/")']
         lines.append("AVAILABLE_DOMAINS = [")
         for i in range(0, len(domains), 6):
             chunk = domains[i:i+6]
@@ -50,7 +51,7 @@ def render_constants(ext, constants):
         return "\n".join(lines)
 
     elif ext == ".js":
-        lines = []
+        lines = [f'const API_BASE_URL = (process.env.ANYSEARCH_API_BASE_URL || "{base_url}").replace(/\\/$/, "");']
         lines.append("const AVAILABLE_DOMAINS = [")
         for i in range(0, len(domains), 6):
             chunk = domains[i:i+6]
@@ -59,7 +60,7 @@ def render_constants(ext, constants):
         return "\n".join(lines)
 
     elif ext == ".ps1":
-        lines = []
+        lines = [f'$API_BASE_URL = if ($env:ANYSEARCH_API_BASE_URL) {{ $env:ANYSEARCH_API_BASE_URL.TrimEnd("/") }} else {{ "{base_url}" }}']
         lines.append("$AVAILABLE_DOMAINS = @(")
         chunks = [domains[i:i+6] for i in range(0, len(domains), 6)]
         for idx, chunk in enumerate(chunks):
@@ -69,7 +70,7 @@ def render_constants(ext, constants):
         return "\n".join(lines)
 
     elif ext == ".sh":
-        lines = []
+        lines = [f'API_BASE_URL="${{ANYSEARCH_API_BASE_URL:-{base_url}}}"', 'API_BASE_URL="${API_BASE_URL%/}"']
         lines.append("AVAILABLE_DOMAINS=(" + " ".join(f'"{d}"' for d in domains) + ")")
         return "\n".join(lines)
 
@@ -191,7 +192,9 @@ def main():
             if new_content != old_content:
                 scripts_changed = True
                 if not args.check:
-                    with open(script_path, "w", encoding="utf-8") as f:
+                    # Keep Bash runnable from Windows worktrees with core.autocrlf=true.
+                    # The repository also pins *.sh to LF in .gitattributes.
+                    with open(script_path, "w", encoding="utf-8", newline="\n") as f:
                         f.write(new_content)
                     print(f"Generated: {script_name}")
                 else:
