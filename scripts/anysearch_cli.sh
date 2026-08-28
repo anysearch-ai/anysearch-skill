@@ -2,9 +2,6 @@
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
-# Identifies access mode + spec version to the backend (X-Anysearch-Client).
-# Keep the version aligned with SKILL.md `version`.
-CLIENT_HEADER="skill/3.0.1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if ! command -v jq &>/dev/null; then
@@ -130,6 +127,7 @@ _parse_sub_domain_params() {
 }
 
 # BEGIN GENERATED:CONSTANTS
+CLIENT_HEADER="skill/3.1.1"
 API_BASE_URL="${ANYSEARCH_API_BASE_URL:-https://api.anysearch.com}"
 API_BASE_URL="${API_BASE_URL%/}"
 AVAILABLE_DOMAINS=("general" "resource" "social_media" "finance" "academic" "legal" "health" "business" "security" "ip" "code" "energy" "environment" "agriculture" "travel" "film" "gaming")

@@ -19,22 +19,22 @@ Get started in 30 seconds: Register with just an email address. The AI agent wil
 If your agent platform supports a skill marketplace/store, search for **anysearch** and install from there. Otherwise, download and install manually:
 
 ```bash
-# Download a pinned release (recommended). Replace v3.1.0 with the latest tag
+# Download a pinned release (recommended). Replace v3.1.1 with the latest tag
 # from https://github.com/anysearch-ai/anysearch-skill/releases
-curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.0.zip
-# or: wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.0.zip
+curl -L -o anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.1.zip
+# or: wget -O anysearch-skill.zip https://github.com/anysearch-ai/anysearch-skill/archive/refs/tags/v3.1.1.zip
 # (For the latest unreleased changes, use .../archive/refs/heads/main.zip instead.)
 
-# Unzip — creates a directory named anysearch-skill-<ref>, e.g. anysearch-skill-3.1.0
+# Unzip — creates a directory named anysearch-skill-<ref>, e.g. anysearch-skill-3.1.1
 unzip anysearch-skill.zip
 
 # Move it to your agent's skill directory, renaming it to "anysearch".
 # Adjust the source directory name to match the ref you downloaded.
-# Claude Code:     mv anysearch-skill-3.1.0 ~/.claude/skills/anysearch
-# OpenCode:        mv anysearch-skill-3.1.0 ~/.config/opencode/skills/anysearch
-# Cursor/Windsurf: mv anysearch-skill-3.1.0 <project>/.skills/anysearch
-# Generic:         mv anysearch-skill-3.1.0 <your_agent_skill_dir>/anysearch
-# Shared agents:   mv anysearch-skill-3.1.0 ~/.agents/skills/anysearch
+# Claude Code:     mv anysearch-skill-3.1.1 ~/.claude/skills/anysearch
+# OpenCode:        mv anysearch-skill-3.1.1 ~/.config/opencode/skills/anysearch
+# Cursor/Windsurf: mv anysearch-skill-3.1.1 <project>/.skills/anysearch
+# Generic:         mv anysearch-skill-3.1.1 <your_agent_skill_dir>/anysearch
+# Shared agents:   mv anysearch-skill-3.1.1 ~/.agents/skills/anysearch
 ```
 
 `~/.agents/skills/` is a useful shared install location when multiple AI tools read from the same skill directory, including Codex, Cursor, and OpenClaw personal agent skills.

@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -15,6 +16,18 @@ from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
+
+
+def load_expected_client_header():
+    content = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    frontmatter = content.split("---", 2)[1]
+    version = re.search(r"^version:\s*([^\s#]+)", frontmatter, re.MULTILINE)
+    if version is None:
+        raise RuntimeError("SKILL.md frontmatter has no version")
+    return f"skill/{version.group(1)}"
+
+
+EXPECTED_CLIENT_HEADER = load_expected_client_header()
 
 
 class State:
@@ -238,7 +251,7 @@ def test_runtime(name, command, base_url):
     require(request["body"].get("params") == {"symbol": "AAPL"}, f"{name}: params were not translated")
     require(request["body"].get("max_results") == 10, f"{name}: REST max_results was not clamped to 10")
     require(not ({"domain", "sub_domain", "sub_domain_params"} & request["body"].keys()), f"{name}: legacy fields leaked to REST")
-    require(request["client"] == "skill/3.0.1", f"{name}: client header missing")
+    require(request["client"] == EXPECTED_CLIENT_HEADER, f"{name}: client header does not match SKILL.md")
 
     STATE.reset()
     result = run(command, ["search", "fail"], base_url)

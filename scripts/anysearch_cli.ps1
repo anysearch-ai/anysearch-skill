@@ -7,9 +7,6 @@ Set-StrictMode -Version Latest
 $OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
 
-# Identifies access mode + spec version to the backend (X-Anysearch-Client).
-# Keep the version aligned with SKILL.md `version`.
-$CLIENT_HEADER = "skill/3.0.1"
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 function Load-Env {
@@ -42,6 +39,7 @@ function Load-Env {
 Load-Env
 
 # BEGIN GENERATED:CONSTANTS
+$CLIENT_HEADER = "skill/3.1.1"
 $API_BASE_URL = if ($env:ANYSEARCH_API_BASE_URL) { $env:ANYSEARCH_API_BASE_URL.TrimEnd("/") } else { "https://api.anysearch.com" }
 $AVAILABLE_DOMAINS = @(
     "general", "resource", "social_media", "finance", "academic", "legal",

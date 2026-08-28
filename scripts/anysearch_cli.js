@@ -8,11 +8,8 @@ const https = require("https");
 
 process.stdout.setDefaultEncoding && process.stdout.setDefaultEncoding("utf-8");
 
-// Identifies access mode + spec version to the backend (X-Anysearch-Client).
-// Keep the version aligned with SKILL.md `version`.
-const CLIENT_HEADER = "skill/3.0.1";
-
 // BEGIN GENERATED:CONSTANTS
+const CLIENT_HEADER = "skill/3.1.1";
 const API_BASE_URL = (process.env.ANYSEARCH_API_BASE_URL || "https://api.anysearch.com").replace(/\/$/, "");
 const AVAILABLE_DOMAINS = [
   "general","resource","social_media","finance","academic","legal",
