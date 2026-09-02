@@ -15,10 +15,6 @@ if sys.stdout.encoding != "utf-8":
 if sys.stderr.encoding != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-# Identifies access mode + spec version to the backend (X-Anysearch-Client).
-# Keep the version aligned with SKILL.md `version`.
-CLIENT_HEADER = "skill/3.0.1"
-
 def _load_env():
     """Load API keys from .env files near the skill.
 
@@ -50,6 +46,7 @@ _load_env()
 
 
 # BEGIN GENERATED:CONSTANTS
+CLIENT_HEADER = "skill/3.1.1"
 API_BASE_URL = os.environ.get("ANYSEARCH_API_BASE_URL", "https://api.anysearch.com").rstrip("/")
 AVAILABLE_DOMAINS = [
     "general", "resource", "social_media", "finance", "academic", "legal",

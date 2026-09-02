@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Code generator for AnySearch CLI scripts.
 
-Reads constants.json from scripts/shared/ and injects the API base URL, domain list,
-and doc command implementation into each CLI script. Eliminates duplication
-across all 4 language implementations.
+Reads the skill version from SKILL.md and shared data from scripts/shared/, then
+injects the client header, API base URL, domain list, and doc command
+implementation into each CLI script. Eliminates duplication across all 4
+language implementations.
 
 Usage:
     python scripts/generate.py          # Generate all scripts
@@ -12,10 +13,12 @@ Usage:
 
 import json
 import os
+import re
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SHARED_DIR = os.path.join(SCRIPT_DIR, "shared")
+SKILL_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), "SKILL.md")
 
 # --- Marker format per language ---
 # Each script uses paired comments to delimit generated sections:
@@ -33,16 +36,40 @@ MARKERS = {
 
 def load_constants():
     with open(os.path.join(SHARED_DIR, "constants.json"), "r", encoding="utf-8") as f:
-        return json.load(f)
+        constants = json.load(f)
+    constants["skill_version"] = load_skill_version()
+    return constants
+
+
+def load_skill_version():
+    """Read and validate the version from the SKILL.md frontmatter."""
+    with open(SKILL_PATH, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    parts = content.split("---", 2)
+    if len(parts) < 3 or parts[0].strip():
+        raise ValueError("SKILL.md must start with YAML frontmatter")
+
+    matches = re.findall(r"^version:\s*([^\s#]+)\s*(?:#.*)?$", parts[1], re.MULTILINE)
+    if len(matches) != 1:
+        raise ValueError("SKILL.md frontmatter must contain exactly one version")
+
+    version = matches[0]
+    semver = r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
+    if not re.fullmatch(semver, version):
+        raise ValueError(f"Invalid SKILL.md version: {version}")
+    return version
 
 
 def render_constants(ext, constants):
     """Render constants block in the target language syntax."""
+    client_header = f'skill/{constants["skill_version"]}'
     base_url = constants["api_base_url"]
     domains = constants["available_domains"]
 
     if ext == ".py":
-        lines = [f'API_BASE_URL = os.environ.get("ANYSEARCH_API_BASE_URL", "{base_url}").rstrip("/")']
+        lines = [f'CLIENT_HEADER = "{client_header}"']
+        lines.append(f'API_BASE_URL = os.environ.get("ANYSEARCH_API_BASE_URL", "{base_url}").rstrip("/")')
         lines.append("AVAILABLE_DOMAINS = [")
         for i in range(0, len(domains), 6):
             chunk = domains[i:i+6]
@@ -51,7 +78,8 @@ def render_constants(ext, constants):
         return "\n".join(lines)
 
     elif ext == ".js":
-        lines = [f'const API_BASE_URL = (process.env.ANYSEARCH_API_BASE_URL || "{base_url}").replace(/\\/$/, "");']
+        lines = [f'const CLIENT_HEADER = "{client_header}";']
+        lines.append(f'const API_BASE_URL = (process.env.ANYSEARCH_API_BASE_URL || "{base_url}").replace(/\\/$/, "");')
         lines.append("const AVAILABLE_DOMAINS = [")
         for i in range(0, len(domains), 6):
             chunk = domains[i:i+6]
@@ -60,7 +88,8 @@ def render_constants(ext, constants):
         return "\n".join(lines)
 
     elif ext == ".ps1":
-        lines = [f'$API_BASE_URL = if ($env:ANYSEARCH_API_BASE_URL) {{ $env:ANYSEARCH_API_BASE_URL.TrimEnd("/") }} else {{ "{base_url}" }}']
+        lines = [f'$CLIENT_HEADER = "{client_header}"']
+        lines.append(f'$API_BASE_URL = if ($env:ANYSEARCH_API_BASE_URL) {{ $env:ANYSEARCH_API_BASE_URL.TrimEnd("/") }} else {{ "{base_url}" }}')
         lines.append("$AVAILABLE_DOMAINS = @(")
         chunks = [domains[i:i+6] for i in range(0, len(domains), 6)]
         for idx, chunk in enumerate(chunks):
@@ -70,7 +99,8 @@ def render_constants(ext, constants):
         return "\n".join(lines)
 
     elif ext == ".sh":
-        lines = [f'API_BASE_URL="${{ANYSEARCH_API_BASE_URL:-{base_url}}}"', 'API_BASE_URL="${API_BASE_URL%/}"']
+        lines = [f'CLIENT_HEADER="{client_header}"']
+        lines.extend([f'API_BASE_URL="${{ANYSEARCH_API_BASE_URL:-{base_url}}}"', 'API_BASE_URL="${API_BASE_URL%/}"'])
         lines.append("AVAILABLE_DOMAINS=(" + " ".join(f'"{d}"' for d in domains) + ")")
         return "\n".join(lines)
 

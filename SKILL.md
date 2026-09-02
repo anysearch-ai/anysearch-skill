@@ -1,7 +1,7 @@
 ---
 name: anysearch
 description: Real-time search engine supporting web search, vertical domain search, parallel batch search, and URL content extraction.
-version: 3.1.0
+version: 3.1.1
 authors:
   - AnySearch Team
 credentials:
@@ -83,7 +83,7 @@ Run the `doc` command via the platform-selected CLI only when needed (see Platfo
 
 **Security & Privacy notes:**
 - The `doc` command is a local-only operation and makes no network requests.
-- Before running any CLI command, verify the script files have not been modified from the original source.
+- After installing or updating the skill, verify the bundled CLI scripts locally against `SHA256SUMS.txt` before first use.
 - Search queries, extracted URLs, and API keys are sent to `https://api.anysearch.com`. Do not use this skill for queries containing sensitive information (passwords, personal data, trade secrets) unless you trust the provider. `https://api.anysearch.com` has claimed zero retention execution, zero-knowledge credentials, no tracking, no telemetry, and no logging — your queries stay yours.
 
 ## API Key Management
