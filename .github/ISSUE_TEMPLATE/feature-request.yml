@@ -1,0 +1,48 @@
+name: Feature Request
+description: Suggest an idea for this project
+title: "[Feature Request] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us improve AnySearch. Tell us what you'd like to see and how it would help your use case.
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Request
+      description: What would you like AnySearch to support or improve?
+      placeholder: Leave a comment
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: What are you trying to achieve, and how would this feature help?
+      placeholder: Leave a comment
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of this project does this relate to?
+      options:
+        - Web Search
+        - Vertical Search
+        - Extract
+        - API
+        - MCP
+        - Skill
+        - Integrations
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: If you have an idea for how this feature could work, feel free to share it. Links, examples, or references are welcome.
+      placeholder: Leave a comment
