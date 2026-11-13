@@ -69,6 +69,7 @@ class Handler(BaseHTTPRequestHandler):
             "query": parse_qs(parsed.query),
             "body": body,
             "client": self.headers.get("X-Anysearch-Client"),
+            "authorization": self.headers.get("Authorization"),
         }
         with STATE.lock:
             STATE.requests.append(item)
@@ -252,6 +253,22 @@ def test_runtime(name, command, base_url):
     require(request["body"].get("max_results") == 10, f"{name}: REST max_results was not clamped to 10")
     require(not ({"domain", "sub_domain", "sub_domain_params"} & request["body"].keys()), f"{name}: legacy fields leaked to REST")
     require(request["client"] == EXPECTED_CLIENT_HEADER, f"{name}: client header does not match SKILL.md")
+
+    # The documented --api_key placement is after the subcommand.
+    STATE.reset()
+    result = run(command, ["search", "synthetic-auth", "--api_key", "synthetic-cli-key"], base_url)
+    require(result.returncode == 0, f"{name}: documented trailing --api_key failed", result)
+    require(STATE.requests[-1]["authorization"] == "Bearer synthetic-cli-key", f"{name}: trailing API key was not sent")
+
+    if name == "python":
+        for arguments, expected in [
+            (["--api_key", "synthetic-global-key", "search", "synthetic-auth"], "synthetic-global-key"),
+            (["--api_key", "synthetic-global-key", "search", "synthetic-auth", "--api_key", "synthetic-local-key"], "synthetic-local-key"),
+        ]:
+            STATE.reset()
+            result = run(command, arguments, base_url)
+            require(result.returncode == 0, "python: global API key compatibility failed", result)
+            require(STATE.requests[-1]["authorization"] == "Bearer " + expected, "python: API key precedence changed")
 
     STATE.reset()
     result = run(command, ["search", "fail"], base_url)

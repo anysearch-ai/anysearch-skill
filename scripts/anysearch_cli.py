@@ -701,6 +701,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     batch_p.set_defaults(func=cmd_batch_search)
 
+    # Accept the documented placement after a command without overwriting a
+    # global --api_key when the command-specific option is omitted.
+    for command_parser in (search_p, ld_p, ext_p, batch_p):
+        command_parser.add_argument(
+            "--api_key",
+            default=argparse.SUPPRESS,
+            help="API key for authentication (overrides .env and environment variables).",
+        )
+
+
+
     doc_p = subparsers.add_parser(
         "doc",
         help="Print AI-facing interface specification",
