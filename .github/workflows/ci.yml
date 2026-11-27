@@ -19,7 +19,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Verify CLI scripts match generate.py (no drift)
+      - name: Verify generated files match SKILL.md (CLIs, SHA256SUMS, README version refs)
         run: python scripts/generate.py --check
 
       - name: Ensure jq is available (bash CLI dependency)
